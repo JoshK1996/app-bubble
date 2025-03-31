@@ -58,7 +58,7 @@ const UserSchema: Schema = new Schema<UserDocument>(
     role: {
       type: String,
       enum: Object.values(Role),
-      default: Role.CUSTOMER,
+      default: Role.USER,
     },
   },
   {

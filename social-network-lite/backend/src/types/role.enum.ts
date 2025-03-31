@@ -2,7 +2,8 @@
  * Role enum defines possible user roles in the application
  */
 export enum Role {
-  CUSTOMER = 'CUSTOMER',
+  // CUSTOMER = 'CUSTOMER', // Removed - E-commerce specific
   ADMIN = 'ADMIN',
-  // USER = 'USER', // Keep USER if needed, but prefer specific roles like CUSTOMER
+  USER = 'USER', // Uncommented - Base role
+  // Add PROVIDER here if/when needed for a specific bubble
 } 
