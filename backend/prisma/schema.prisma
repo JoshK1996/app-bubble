@@ -1,0 +1,87 @@
+// This is the Prisma schema file for the Task Management / Productivity Bubble
+// It defines the data model for SQLite database using Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication and user information
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  password       String
+  name           String
+  role           String   @default("USER") // Changed from enum to string for SQLite compatibility
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  boards         Board[]          // Boards created by this user
+  ownedBoards    Board[]          @relation("BoardOwner")
+  assignedTasks  Task[]           @relation("TaskAssignee")
+
+  @@map("users")
+}
+
+// Board model - represents a project or collection of tasks
+model Board {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdById String   @map("created_by_id")
+  
+  owner       User     @relation("BoardOwner", fields: [ownerId], references: [id])
+  ownerId     String   @map("owner_id")
+  
+  columns     Column[]
+
+  @@map("boards")
+}
+
+// Column model - represents a status column within a board (e.g., "To Do", "In Progress", "Done")
+model Column {
+  id        String   @id @default(uuid())
+  title     String
+  order     Int      // Position of the column in the board
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId   String   @map("board_id")
+  
+  tasks     Task[]
+
+  @@map("columns")
+}
+
+// Task model - represents a task or item within a column
+model Task {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  order       Int       // Position of the task in the column
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deadline    DateTime? // Optional deadline for the task
+  
+  // Relations
+  column      Column    @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  columnId    String    @map("column_id")
+  
+  assignee    User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assigneeId  String?   @map("assignee_id")
+
+  @@map("tasks")
+} 
+

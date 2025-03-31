@@ -1,6 +1,10 @@
-# Task Management Bubble
+# App Bubble
 
 A modern, containerized task management application with a React frontend and Node.js backend.
+
+## Project Overview
+
+This project is part of the APP BUBBLE framework - AI-Generated Application Frameworks, which aims to create high-quality, reusable application starter kits optimized for both developer usage and AI comprehension.
 
 ## Project Structure
 
@@ -58,7 +62,7 @@ app-bubble/
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/app-bubble.git
+git clone https://github.com/JoshK1996/app-bubble.git
 cd app-bubble
 ```
 
@@ -125,6 +129,33 @@ docker-compose -f docker-compose.yml build
 docker-compose -f docker-compose.yml up -d
 ```
 
+## Project Requirements and Guidelines
+
+### Technology Stack
+
+- **Backend**: Node.js, Express.js framework with TypeScript
+- **Frontend**: React.js (using Vite tooling) with TypeScript
+- **Database**: Support for both PostgreSQL (via Prisma ORM) and MongoDB (via Mongoose ODM)
+- **API**: RESTful API design with OpenAPI (Swagger) documentation
+
+### Architecture & Design Philosophy
+
+- Feature-based directory structure
+- Separation of Concerns (SoC) and SOLID principles
+- Clear, explicit, and easy-to-follow code
+- Extensive TypeScript typing
+
+### Authentication & Authorization
+
+- JWT-based authentication
+- Role-Based Access Control (RBAC)
+
+### Code Quality and Conventions
+
+- Airbnb TypeScript Style Guide
+- Descriptive naming conventions
+- Comprehensive documentation and comments
+
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details.
