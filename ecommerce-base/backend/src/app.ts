@@ -19,8 +19,8 @@ import config from '@config/config';
 import userRoutes from '@features/users/user.routes';
 import productRoutes from '@features/products/product.routes';
 import cartRoutes from '@features/cart/cart.routes';
+import orderRoutes from '@features/orders/order.routes';
 // Import additional routes here
-// import orderRoutes from '@features/orders/order.routes';
 
 // Initialize Express app
 const app = express();
@@ -80,7 +80,7 @@ app.get('/health', (req: Request, res: Response) => {
 app.use(`${API_PREFIX}/users`, userRoutes);
 app.use(`${API_PREFIX}/products`, productRoutes);
 app.use(`${API_PREFIX}/cart`, cartRoutes);
-// app.use(`${API_PREFIX}/orders`, orderRoutes);
+app.use(`${API_PREFIX}/orders`, orderRoutes);
 
 // Root path handler - Redirect to API docs or show basic info
 app.get('/', (req: Request, res: Response) => {
