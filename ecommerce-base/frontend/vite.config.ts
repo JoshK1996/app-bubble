@@ -17,6 +17,7 @@ export default defineConfig({
       '@services': resolve(__dirname, 'src/services'),
       '@hooks': resolve(__dirname, 'src/hooks'),
       '@contexts': resolve(__dirname, 'src/contexts'),
+      '@constants': resolve(__dirname, 'src/constants'),
       '@store': resolve(__dirname, 'src/store'),
       '@types': resolve(__dirname, 'src/types'),
       '@utils': resolve(__dirname, 'src/utils'),
