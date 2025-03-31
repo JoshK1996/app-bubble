@@ -1,4 +1,4 @@
-// Social Network Lite - Prisma Schema
+// E-commerce Platform Base - Prisma Schema
 
 generator client {
   provider = "prisma-client-js"
@@ -9,59 +9,140 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User model - represents users in the social network
+// User model - represents users (customers or admins)
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
   username  String   @unique
   password  String
   fullName  String
-  bio       String?
+  // Add address fields stubs if needed in future
+  // addressLine1 String?
+  // city         String?
+  // postalCode   String?
+  // country      String?
   avatarUrl String?
-  role      Role     @default(USER)
+  role      Role     @default(CUSTOMER) // Default role is CUSTOMER
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  posts           Post[]          @relation("UserPosts")
-  followers       Follow[]        @relation("UserFollowers")
-  following       Follow[]        @relation("UserFollowing")
+  cart    Cart?   // A user can have one cart
+  orders  Order[] // A user can have multiple orders
 
   @@map("users")
 }
 
-// Post model - represents user posts in the social network
-model Post {
+// Category model - represents product categories
+model Category {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  slug      String?   @unique // Optional URL-friendly identifier
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  products  Product[] // A category can have multiple products
+
+  @@map("categories")
+}
+
+// Product model - represents products available for sale
+model Product {
+  id           String    @id @default(uuid())
+  name         String
+  description  String?
+  price        Float     // Use Float for monetary values, consider Decimal if precision is critical
+  imageUrl     String?
+  stock        Int       @default(0) // Stock quantity
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  categoryId   String?
+  category     Category? @relation(fields: [categoryId], references: [id])
+  cartItems    CartItem[] // Product can be in multiple cart items
+  orderItems   OrderItem[] // Product can be in multiple order items
+
+  @@map("products")
+}
+
+// Cart model - represents a user's shopping cart
+model Cart {
   id        String   @id @default(uuid())
-  content   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  userId    String
-  user      User     @relation("UserPosts", fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @unique // Each cart belongs to one user
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[] // A cart can have multiple items
 
-  @@map("posts")
+  @@map("carts")
 }
 
-// Follow model - represents follow relationships between users
-model Follow {
-  id           String   @id @default(uuid())
-  createdAt    DateTime @default(now())
+// CartItem model - represents an item within a shopping cart
+model CartItem {
+  id        String   @id @default(uuid())
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  followerId   String
-  followingId  String
-  follower     User     @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
-  following    User     @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  // Ensure unique follower-following relationship
-  @@unique([followerId, followingId])
-  @@map("follows")
+  @@unique([cartId, productId]) // Prevent duplicate products in the same cart (adjust quantity instead)
+  @@map("cart_items")
+}
+
+// Order model - represents a customer's order
+model Order {
+  id          String   @id @default(uuid())
+  totalAmount Float    // Total price of the order
+  status      OrderStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  items       OrderItem[] // An order consists of multiple items
+
+  @@map("orders")
+}
+
+// OrderItem model - represents an item within an order
+model OrderItem {
+  id             String   @id @default(uuid())
+  quantity       Int
+  priceAtPurchase Float   // Price of the product at the time of order
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id]) // Consider if product deletion should affect orders
+
+  @@map("order_items")
 }
 
 // Role enum - defines possible user roles
 enum Role {
-  USER
+  CUSTOMER
   ADMIN
+  USER // Keep USER temporarily if needed by auth, but prefer CUSTOMER/ADMIN
+}
+
+// OrderStatus enum - defines possible order statuses
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
 } 

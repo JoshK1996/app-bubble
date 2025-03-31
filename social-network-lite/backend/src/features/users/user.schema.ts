@@ -1,19 +1,20 @@
 /**
  * User schema definition for MongoDB using Mongoose
- * Represents users in the social network
+ * Represents users in the e-commerce platform (customers or admins)
  */
 import mongoose, { Schema, Document } from 'mongoose';
 import { Role } from '../../types/role.enum';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * User document interface defines the shape of a User document in MongoDB
  */
-export interface IUser extends Document {
+export interface UserDocument extends Document {
+  _id: string;
   email: string;
   username: string;
   password: string;
   fullName: string;
-  bio?: string;
   avatarUrl?: string;
   role: Role;
   createdAt: Date;
@@ -23,8 +24,12 @@ export interface IUser extends Document {
 /**
  * User schema for MongoDB using Mongoose
  */
-const UserSchema: Schema = new Schema(
+const UserSchema: Schema = new Schema<UserDocument>(
   {
+    _id: {
+      type: String,
+      default: uuidv4,
+    },
     email: {
       type: String,
       required: true,
@@ -46,10 +51,6 @@ const UserSchema: Schema = new Schema(
       type: String,
       required: true,
     },
-    bio: {
-      type: String,
-      default: null,
-    },
     avatarUrl: {
       type: String,
       default: null,
@@ -57,14 +58,15 @@ const UserSchema: Schema = new Schema(
     role: {
       type: String,
       enum: Object.values(Role),
-      default: Role.USER,
+      default: Role.CUSTOMER,
     },
   },
   {
     timestamps: true, // Adds createdAt and updatedAt fields
     versionKey: false, // Don't include the __v field
+    collection: 'users',
   },
 );
 
 // Create and export the User model
-export const UserModel = mongoose.model<IUser>('User', UserSchema); 
+export const UserModel = mongoose.model<UserDocument>('User', UserSchema); 
