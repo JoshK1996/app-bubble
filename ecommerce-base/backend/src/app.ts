@@ -17,8 +17,8 @@ import config from '@config/config';
 
 // Import routes
 import userRoutes from '@features/users/user.routes';
+import productRoutes from '@features/products/product.routes';
 // Import additional routes here
-// import productRoutes from '@features/products/product.routes';
 // import cartRoutes from '@features/cart/cart.routes';
 // import orderRoutes from '@features/orders/order.routes';
 
@@ -77,7 +77,7 @@ app.get('/health', (req: Request, res: Response) => {
 
 // Mount API Routes
 app.use(`${API_PREFIX}/users`, userRoutes);
-// app.use(`${API_PREFIX}/products`, productRoutes);
+app.use(`${API_PREFIX}/products`, productRoutes);
 // app.use(`${API_PREFIX}/cart`, cartRoutes);
 // app.use(`${API_PREFIX}/orders`, orderRoutes);
 

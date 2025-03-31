@@ -16,7 +16,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "swagger": "tsoa spec-and-routes" 
+    "swagger": "tsoa spec-and-routes"
   },
   "keywords": [
     "ecommerce",
@@ -29,7 +29,7 @@
   "author": "AI Agent (App Bubble)",
   "license": "MIT",
   "dependencies": {
-    "@prisma/client": "^5.12.1", 
+    "@prisma/client": "^5.12.1",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
@@ -41,7 +41,7 @@
     "mongoose": "^8.3.2",
     "morgan": "^1.10.0",
     "swagger-ui-express": "^5.0.0",
-    "tsoa": "^6.1.2", 
+    "tsoa": "^6.1.2",
     "uuid": "^10.0.0",
     "winston": "^3.13.0",
     "yamljs": "^0.3.0",
@@ -58,16 +58,16 @@
     "@types/node": "^20.12.7",
     "@types/supertest": "^6.0.2",
     "@types/swagger-ui-express": "^4.1.6",
-    "@types/uuid": "^9.0.8", 
+    "@types/uuid": "^9.0.8",
     "@types/yamljs": "^0.2.34",
     "@typescript-eslint/eslint-plugin": "^7.7.0",
     "@typescript-eslint/parser": "^7.7.0",
     "eslint": "^8.57.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-airbnb-typescript": "^18.0.0",
-    "eslint-config-prettier": "^9.1.0", 
+    "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.29.1",
-    "eslint-plugin-prettier": "^5.1.3", 
+    "eslint-plugin-prettier": "^5.1.3",
     "jest": "^29.7.0",
     "nodemon": "^3.1.0",
     "prettier": "^3.2.5",
@@ -75,7 +75,7 @@
     "supertest": "^6.3.4",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0", 
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.4.5"
   }
-} 
+}
