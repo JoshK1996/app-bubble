@@ -1,0 +1,45 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Specifies the Prisma Client generator.
+// The output directory specifies where the generated Prisma Client code will be located.
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../node_modules/.prisma/client" // Default output location
+}
+
+// Specifies the database connection.
+datasource db {
+  provider = "postgresql"
+  // Uses the DATABASE_URL environment variable for the connection URL.
+  // Make sure this variable is set in your .env file.
+  url      = env("DATABASE_URL")
+}
+
+// --- E-commerce Models Will Go Here ---
+
+// Example User model (adjust according to PRC)
+model User {
+  id         String      @id @default(uuid())
+  email      String      @unique
+  username   String      @unique
+  password   String      // Hashed password
+  fullName   String
+  avatarUrl  String?     // Optional
+  role       Role        @default(USER)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  // Add relations for e-commerce models later
+  // e.g., orders Order[]
+  // e.g., cart Cart?
+}
+
+enum Role {
+  USER     // Base user role (Can be Customer for E-commerce)
+  ADMIN    // Administrator role
+  // PROVIDER // Example for other bubbles, remove if not needed
+}
+
+
+// Add models for Product, Category, Cart, CartItem, Order, OrderItem later... 
