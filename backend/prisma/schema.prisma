@@ -1,13 +1,13 @@
 // This is the Prisma schema file for the Task Management / Productivity Bubble
-// It defines the data model for PostgreSQL database using Prisma ORM
+// It defines the data model for SQLite database using Prisma ORM
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("POSTGRES_URL")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 // User model for authentication and user information
@@ -16,7 +16,7 @@ model User {
   email          String   @unique
   password       String
   name           String
-  role           Role     @default(USER)
+  role           String   @default("USER") // Changed from enum to string for SQLite compatibility
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
   
@@ -26,12 +26,6 @@ model User {
   assignedTasks  Task[]           @relation("TaskAssignee")
 
   @@map("users")
-}
-
-// Role enum for user permissions
-enum Role {
-  USER
-  ADMIN
 }
 
 // Board model - represents a project or collection of tasks
@@ -90,3 +84,4 @@ model Task {
 
   @@map("tasks")
 } 
+

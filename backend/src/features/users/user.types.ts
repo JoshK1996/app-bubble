@@ -6,12 +6,17 @@
  */
 
 /**
- * Enum representing the possible user roles in the system
+ * User roles in the system as string constants (for SQLite compatibility)
  */
-export enum UserRole {
-  USER = 'USER',
-  ADMIN = 'ADMIN',
-}
+export const UserRoles = {
+  USER: 'USER',
+  ADMIN: 'ADMIN',
+} as const;
+
+/**
+ * User role type definition as a union of string literals
+ */
+export type UserRole = (typeof UserRoles)[keyof typeof UserRoles];
 
 /**
  * User registration request data structure

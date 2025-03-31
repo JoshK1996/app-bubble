@@ -7,7 +7,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../shared/services/auth.service';
-import { UserRole, JwtPayload } from '../features/users/user.types';
+import { UserRole, UserRoles, JwtPayload } from '../features/users/user.types';
 
 // Extend Express Request interface to include user property
 declare global {
@@ -79,7 +79,7 @@ export const requireRoles = (roles: UserRole[]) => (
 /**
  * Middleware to restrict access to ADMIN users only
  */
-export const requireAdmin = requireRoles([UserRole.ADMIN]);
+export const requireAdmin = requireRoles([UserRoles.ADMIN]);
 
 /**
  * Middleware to restrict access to the user's own resources
@@ -101,7 +101,7 @@ export const requireOwnership = (
   const resourceUserId = getUserId(req);
   
   // Allow admins to access any user's resources
-  if (req.user.role === UserRole.ADMIN) {
+  if (req.user.role === UserRoles.ADMIN) {
     next();
     return;
   }
