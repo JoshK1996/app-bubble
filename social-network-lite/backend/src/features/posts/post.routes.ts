@@ -38,27 +38,28 @@ const postController = new PostController();
  *       401:
  *         description: Not authenticated
  */
-postRouter.post('/', authenticate, createPostValidation, postController.createPost);
+postRouter.post(
+  '/',
+  authenticate,
+  createPostValidation,
+  postController.createPost,
+);
 
 /**
  * @swagger
- * /posts/{id}:
+ * /posts/feed:
  *   get:
- *     summary: Get a post by ID
+ *     summary: Get feed posts (posts from followed users)
  *     tags: [Posts]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Post fetched successfully
- *       404:
- *         description: Post not found
+ *         description: Feed posts fetched successfully
+ *       401:
+ *         description: Not authenticated
  */
-postRouter.get('/:id', postController.getPostById);
+postRouter.get('/feed', authenticate, postController.getFeedPosts);
 
 /**
  * @swagger
@@ -80,19 +81,23 @@ postRouter.get('/user/:userId', postController.getUserPosts);
 
 /**
  * @swagger
- * /posts/feed:
+ * /posts/{id}:
  *   get:
- *     summary: Get feed posts (posts from followed users)
+ *     summary: Get a post by ID
  *     tags: [Posts]
- *     security:
- *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
- *         description: Feed posts fetched successfully
- *       401:
- *         description: Not authenticated
+ *         description: Post fetched successfully
+ *       404:
+ *         description: Post not found
  */
-postRouter.get('/feed', authenticate, postController.getFeedPosts);
+postRouter.get('/:id', postController.getPostById);
 
 /**
  * @swagger
@@ -131,7 +136,12 @@ postRouter.get('/feed', authenticate, postController.getFeedPosts);
  *       404:
  *         description: Post not found
  */
-postRouter.put('/:id', authenticate, updatePostValidation, postController.updatePost);
+postRouter.put(
+  '/:id',
+  authenticate,
+  updatePostValidation,
+  postController.updatePost,
+);
 
 /**
  * @swagger
@@ -159,4 +169,4 @@ postRouter.put('/:id', authenticate, updatePostValidation, postController.update
  */
 postRouter.delete('/:id', authenticate, postController.deletePost);
 
-export default postRouter; 
+export default postRouter;
