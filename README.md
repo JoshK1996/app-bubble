@@ -2,7 +2,6 @@
 Group framework
 APP BUBBLE: Product Requirements Checklist (PRC) & AI Generation Rules
 Version: 1.0
-Date: 2023-10-27
 Project Goal: To generate a set of distinct, high-quality, reusable application framework starter kits ("Bubbles") for popular app types, specifically optimized for future comprehension, modification, and utilization by AI code generation agents.
 
 1. Overview & Core Instruction
