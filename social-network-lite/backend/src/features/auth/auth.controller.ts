@@ -1,0 +1,121 @@
+/**
+ * Authentication Controller
+ * Handles HTTP requests related to user authentication
+ */
+import { Request, Response } from 'express';
+import { validationResult } from 'express-validator';
+import { AuthService, LoginUserRequest, RegisterUserRequest } from './auth.service';
+
+/**
+ * Controller for handling authentication-related HTTP requests
+ */
+export class AuthController {
+  private authService: AuthService;
+
+  /**
+   * Initialize the controller with its dependencies
+   */
+  constructor() {
+    this.authService = new AuthService();
+  }
+
+  /**
+   * Handle user registration
+   * @param req Express request object
+   * @param res Express response object
+   */
+  registerUser = async (req: Request, res: Response): Promise<void> => {
+    try {
+      // Validate request data
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      // Extract user data from request body
+      const userData: RegisterUserRequest = {
+        email: req.body.email,
+        username: req.body.username,
+        password: req.body.password,
+        fullName: req.body.fullName,
+      };
+
+      // Register user
+      const result = await this.authService.register(userData);
+
+      // Return success response
+      res.status(201).json(result);
+    } catch (error) {
+      // Handle service errors
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: 'An unexpected error occurred' });
+      }
+    }
+  };
+
+  /**
+   * Handle user login
+   * @param req Express request object
+   * @param res Express response object
+   */
+  loginUser = async (req: Request, res: Response): Promise<void> => {
+    try {
+      // Validate request data
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      // Extract login credentials from request body
+      const loginData: LoginUserRequest = {
+        email: req.body.email,
+        password: req.body.password,
+      };
+
+      // Authenticate user
+      const result = await this.authService.login(loginData);
+
+      // Return success response
+      res.status(200).json(result);
+    } catch (error) {
+      // Handle authentication failure
+      if (error instanceof Error) {
+        res.status(401).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: 'An unexpected error occurred' });
+      }
+    }
+  };
+
+  /**
+   * Get current authenticated user information
+   * @param req Express request object (with user property from auth middleware)
+   * @param res Express response object
+   */
+  getCurrentUser = async (req: Request, res: Response): Promise<void> => {
+    try {
+      // Check if user is authenticated
+      if (!req.user) {
+        res.status(401).json({ message: 'Authentication required' });
+        return;
+      }
+
+      // Retrieve user data
+      const user = await this.authService.getCurrentUser(req.user.userId);
+
+      // Return user information
+      res.status(200).json({ user });
+    } catch (error) {
+      // Handle user retrieval errors
+      if (error instanceof Error) {
+        res.status(404).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: 'An unexpected error occurred' });
+      }
+    }
+  };
+} 
