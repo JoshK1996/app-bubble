@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # Backend service
+  backend:
+    build:
+      context: ./backend
+      target: development
+    ports:
+      - "${PORT:-4000}:4000"
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - DATABASE_TYPE=${DATABASE_TYPE:-postgres}
+      - POSTGRES_URL=postgresql://postgres:postgres@postgres:5432/taskmanagement
+      - MONGODB_URI=mongodb://mongodb:27017/taskmanagement
+      - JWT_SECRET=${JWT_SECRET:-development_secret_key_change_in_production}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-1d}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - mongodb
+    restart: unless-stopped
+
+  # Frontend service
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:${PORT:-4000}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=taskmanagement
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # MongoDB database
+  mongodb:
+    image: mongo:6-jammy
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  mongodb_data: 

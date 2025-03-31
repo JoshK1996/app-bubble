@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+.prisma
+prisma/migrations
+*.md
+*.yml
+*.yaml 
