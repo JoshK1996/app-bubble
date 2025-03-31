@@ -1,0 +1,63 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+APP BUBBLE: AI Generation Rules File (Concise Summary)
+This file summarizes the critical, non-negotiable rules for the AI agent generating the APP BUBBLE frameworks. Refer to the full PRC for detailed explanations.
+
+I. Core Philosophy (Highest Priority):
+
+AI & Human Readability: The absolute top priority. Code MUST be exceptionally clear, explicit, and easy to understand for both AI agents and human developers with zero prior context.
+
+Descriptive Naming: Use unambiguous, full-word names for everything.
+
+Comprehensive Commenting: Use TSDoc for all exports and liberal inline comments explaining purpose and rationale.
+
+Standards & Simplicity: Strictly adhere to specified standards (Airbnb Style Guide). Prefer simple, readable code over complex alternatives.
+
+Consistency: Apply all general rules consistently across all six generated Bubbles.
+
+II. Technical Stack & Architecture:
+
+Mandatory Stack: Node.js/Express/TypeScript (Backend), React/Vite/TypeScript (Frontend), PostgreSQL (Prisma) + MongoDB (Mongoose) support via DATABASE_TYPE env var.
+
+Structure: Use Feature-Based Directory Structure consistently. Enforce Separation of Concerns.
+
+API: RESTful. Generate OpenAPI v3 documentation automatically.
+
+Authentication: JWT mandatory with specified endpoints (/register, /login, /me). Include RBAC stubs based on User role.
+
+III. Code Quality & Verification:
+
+Linting/Formatting: Code MUST pass ESLint (Airbnb TS) and Prettier checks. Include config files.
+
+Testing Frameworks: Jest/Supertest (Backend), Vitest/RTL (Frontend).
+
+Mandatory Testing:
+
+Generate comprehensive integration tests for ALL backend API endpoints (success, validation, authN, authZ, not found).
+
+Generate basic render and interaction tests for frontend components/pages.
+
+Tests MUST use a dedicated test database.
+
+Passing Tests (Rule): Generated code MUST pass the complete test suite (npm test, including lint/format checks) without modification.
+
+IV. Configuration & Documentation:
+
+Configuration: Strictly via .env file. Provide comprehensive .env.example. No hardcoded secrets/config.
+
+Mandatory README: Each Bubble MUST have its own detailed README.md covering all specified sections (Philosophy, Stack, Structure, Setup, Running, API, DB, Testing, Env Vars). The "Folder Structure Explanation" is critical.
+
+Docker: Include Backend/Frontend Dockerfiles and a docker-compose.yml orchestrating backend, frontend, postgres, and mongo services.
+
+V. Deliverables:
+
+Six distinct, complete, Git-ready repositories, one for each specified Bubble type.
+
+Each repo must contain backend, frontend, DB setup, config, tests, scripts, Docker files, and the mandatory README.
+
+VI. Scope Boundaries (Non-Goals):
+
+Do not build production-ready apps, complex features, polished UI, payment integrations, or E2E tests. Focus on the foundational framework.
