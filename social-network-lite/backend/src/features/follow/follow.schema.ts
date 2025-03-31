@@ -40,4 +40,4 @@ const FollowSchema: Schema = new Schema(
 FollowSchema.index({ follower: 1, following: 1 }, { unique: true });
 
 // Create and export the Follow model
-export const FollowModel = mongoose.model<IFollow>('Follow', FollowSchema); 
+export const FollowModel = mongoose.model<IFollow>('Follow', FollowSchema);

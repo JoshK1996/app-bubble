@@ -37,4 +37,4 @@ const PostSchema: Schema = new Schema(
 );
 
 // Create and export the Post model
-export const PostModel = mongoose.model<IPost>('Post', PostSchema); 
+export const PostModel = mongoose.model<IPost>('Post', PostSchema);

@@ -68,4 +68,4 @@ export const setupSwagger = (app: Express): void => {
   });
 
   console.log('API Documentation available at /api-docs');
-}; 
+};

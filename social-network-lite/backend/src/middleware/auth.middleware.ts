@@ -11,6 +11,7 @@ import { DatabaseType, getDatabaseType } from '../config/database';
 interface JwtPayload {
   userId: string;
   username: string;
+  role?: Role;
 }
 
 // Extend Express Request interface to include authenticated user information
@@ -20,6 +21,7 @@ declare global {
       user?: {
         userId: string;
         username: string;
+        role?: Role;
       };
     }
   }
@@ -41,6 +43,7 @@ export const authenticate = (
       req.user = {
         userId: testHeader,
         username: 'testuser',
+        role: Role.USER // Default role for test users
       };
       return next();
     }

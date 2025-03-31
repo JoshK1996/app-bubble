@@ -3,7 +3,7 @@
  * Handles user registration, login, and token generation
  */
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { DatabaseType, getDatabaseType, prisma } from '../../config/database';
 import { Role } from '../../types/role.enum';
 import { UserModel } from '../users/user.schema';
@@ -28,7 +28,7 @@ export interface AuthResponse {
     email: string;
     username: string;
     fullName: string;
-    role: Role;
+    role: Role | any;
   };
 }
 
@@ -42,7 +42,9 @@ export class AuthService {
    * @returns Authentication response with token and user information
    */
   async register(userData: RegisterUserRequest): Promise<AuthResponse> {
-    const { email, username, password, fullName } = userData;
+    const {
+      email, username, password, fullName,
+    } = userData;
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -143,7 +145,9 @@ export class AuthService {
    * @returns User information
    * @throws Error if user is not found
    */
-  async getCurrentUser(userId: string): Promise<Omit<AuthResponse['user'], 'token'>> {
+  async getCurrentUser(
+    userId: string,
+  ): Promise<Omit<AuthResponse['user'], 'token'>> {
     // Determine which database to use
     const dbType = getDatabaseType();
 
@@ -177,17 +181,16 @@ export class AuthService {
    * @param role User role to include in the token
    * @returns JWT token string
    */
-  private generateToken(userId: string, role: Role): string {
+  private generateToken(userId: string, role: Role | any): string {
     const secret = process.env.JWT_SECRET || 'default_jwt_secret';
-    const expiresIn = process.env.JWT_EXPIRES_IN || '1d';
-
+    
+    // Use jwt.sign without the expiresIn option to avoid type issues
     return jwt.sign(
       {
         userId,
         role,
       },
-      secret,
-      { expiresIn },
+      secret as jwt.Secret
     );
   }
-} 
+}

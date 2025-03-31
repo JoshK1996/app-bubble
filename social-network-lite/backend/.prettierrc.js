@@ -1,4 +1,4 @@
-/** 
+/**
  * Prettier configuration for the Social Network Lite backend
  */
 module.exports = {
@@ -8,4 +8,4 @@ module.exports = {
   printWidth: 80,
   tabWidth: 2,
   endOfLine: 'lf',
-}; 
+};

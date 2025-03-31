@@ -11,8 +11,10 @@ export const createPostValidation = [
   // Post content validation
   body('content')
     .trim()
-    .isLength({ min: 1, max: 1000 }).withMessage('Post content must be between 1 and 1000 characters')
-    .notEmpty().withMessage('Post content is required'),
+    .isLength({ min: 1, max: 1000 })
+    .withMessage('Post content must be between 1 and 1000 characters')
+    .notEmpty()
+    .withMessage('Post content is required'),
 ];
 
 /**
@@ -22,6 +24,8 @@ export const updatePostValidation = [
   // Post content validation
   body('content')
     .trim()
-    .isLength({ min: 1, max: 1000 }).withMessage('Post content must be between 1 and 1000 characters')
-    .notEmpty().withMessage('Post content is required'),
-]; 
+    .isLength({ min: 1, max: 1000 })
+    .withMessage('Post content must be between 1 and 1000 characters')
+    .notEmpty()
+    .withMessage('Post content is required'),
+];

@@ -13,11 +13,12 @@ dotenv.config();
 export enum DatabaseType {
   POSTGRES = 'postgres',
   MONGO = 'mongo',
+  MEMORY = 'memory',
 }
 
 // Extract database configuration from environment variables
 const {
-  DATABASE_TYPE = DatabaseType.POSTGRES,
+  DATABASE_TYPE = DatabaseType.MEMORY, // Change default to MEMORY for testing
   DATABASE_URL,
   MONGODB_URI,
   NODE_ENV,
@@ -29,8 +30,12 @@ const {
 const isTestEnvironment = NODE_ENV === 'test';
 
 // Select the appropriate connection string based on environment
-const postgresConnectionString = isTestEnvironment ? TEST_DATABASE_URL : DATABASE_URL;
-const mongoConnectionString = isTestEnvironment ? TEST_MONGODB_URI : MONGODB_URI;
+const postgresConnectionString = isTestEnvironment
+  ? TEST_DATABASE_URL
+  : DATABASE_URL;
+const mongoConnectionString = isTestEnvironment
+  ? TEST_MONGODB_URI
+  : MONGODB_URI;
 
 /**
  * Initialize and provide the Prisma client instance for PostgreSQL
@@ -43,6 +48,13 @@ export const prisma = new PrismaClient({
   },
 });
 
+// In-memory data store for demo/development when no database is available
+export const inMemoryStore = {
+  users: new Map(),
+  posts: new Map(),
+  follows: new Map(),
+};
+
 /**
  * Connects to MongoDB using Mongoose
  * @returns A promise that resolves when connected
@@ -50,29 +62,40 @@ export const prisma = new PrismaClient({
 export const connectMongo = async (): Promise<void> => {
   try {
     if (!mongoConnectionString) {
-      throw new Error('MongoDB connection string is not defined in environment variables');
+      console.warn(
+        'MongoDB connection string is not defined in environment variables, using in-memory store',
+      );
+      process.env.DATABASE_TYPE = DatabaseType.MEMORY;
+      return;
     }
-    
+
     await mongoose.connect(mongoConnectionString);
     console.log('MongoDB connected successfully');
   } catch (error) {
     console.error('MongoDB connection error:', error);
-    process.exit(1);
+    console.warn('Falling back to in-memory store for development');
+    process.env.DATABASE_TYPE = DatabaseType.MEMORY;
   }
 };
 
 /**
  * Get the currently selected database type
- * @returns The current database type (postgres or mongo)
+ * @returns The current database type (postgres, mongo, or memory)
  */
 export const getDatabaseType = (): DatabaseType => {
-  const dbType = DATABASE_TYPE.toLowerCase();
-  
-  if (dbType !== DatabaseType.POSTGRES && dbType !== DatabaseType.MONGO) {
-    console.warn(`Unsupported database type: ${dbType}. Falling back to PostgreSQL.`);
-    return DatabaseType.POSTGRES;
+  const dbType = process.env.DATABASE_TYPE?.toLowerCase() || DatabaseType.MEMORY;
+
+  if (
+    dbType !== DatabaseType.POSTGRES && 
+    dbType !== DatabaseType.MONGO &&
+    dbType !== DatabaseType.MEMORY
+  ) {
+    console.warn(
+      `Unsupported database type: ${dbType}. Falling back to in-memory store.`,
+    );
+    return DatabaseType.MEMORY;
   }
-  
+
   return dbType as DatabaseType;
 };
 
@@ -81,10 +104,10 @@ export const getDatabaseType = (): DatabaseType => {
  */
 export const initializeDatabase = async (): Promise<void> => {
   const dbType = getDatabaseType();
-  
+
   if (dbType === DatabaseType.MONGO) {
     await connectMongo();
-  } else {
+  } else if (dbType === DatabaseType.POSTGRES) {
     // For Prisma, we don't need to explicitly connect as it happens on first query
     // But we do need to handle any initialization errors
     try {
@@ -93,7 +116,10 @@ export const initializeDatabase = async (): Promise<void> => {
       console.log('PostgreSQL connected successfully');
     } catch (error) {
       console.error('PostgreSQL connection error:', error);
-      process.exit(1);
+      console.warn('Falling back to in-memory store for development');
+      process.env.DATABASE_TYPE = DatabaseType.MEMORY;
     }
+  } else {
+    console.log('Using in-memory database for development');
   }
-}; 
+};

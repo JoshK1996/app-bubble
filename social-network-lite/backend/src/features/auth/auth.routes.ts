@@ -93,4 +93,4 @@ authRouter.post('/login', loginValidation, authController.loginUser);
  */
 authRouter.get('/me', authenticate, authController.getCurrentUser);
 
-export default authRouter; 
+export default authRouter;

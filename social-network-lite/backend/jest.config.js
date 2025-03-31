@@ -1,4 +1,4 @@
-/** 
+/**
  * Jest configuration for the Social Network Lite backend testing
  */
 module.exports = {
@@ -30,4 +30,4 @@ module.exports = {
     },
   },
   testTimeout: 10000,
-}; 
+};

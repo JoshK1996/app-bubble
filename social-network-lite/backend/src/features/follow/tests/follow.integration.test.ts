@@ -6,6 +6,7 @@ import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { inMemoryStore, DatabaseType } from '../../../config/database';
 import followRoutes from '../follow.routes';
+import { Role } from '../../../types/role.enum';
 
 // Mock the database configuration to use in-memory database for testing
 jest.mock('../../../config/database', () => {
@@ -34,7 +35,7 @@ describe('Follow API - Integration Tests', () => {
       req.user = {
         userId: user1Id,
         username: 'testuser',
-        role: 'USER'
+        role: Role.USER
       };
       next();
     });
@@ -59,7 +60,7 @@ describe('Follow API - Integration Tests', () => {
     inMemoryStore.users.set(user2Id, { id: user2Id, username: 'user2' });
   });
   
-  describe('POST /api/follow/:id', () => {
+  describe('POST /api/follow/:userId', () => {
     it('should create a follow relationship', async () => {
       const response = await request(app)
         .post(`/api/follow/${user2Id}`)
@@ -89,7 +90,7 @@ describe('Follow API - Integration Tests', () => {
       expect(inMemoryStore.follows.size).toBe(0);
     });
     
-    it('should return 400 when already following user', async () => {
+    it('should return 409 when already following user', async () => {
       // First follow request
       await request(app)
         .post(`/api/follow/${user2Id}`)
@@ -100,7 +101,7 @@ describe('Follow API - Integration Tests', () => {
         .post(`/api/follow/${user2Id}`)
         .set('Content-Type', 'application/json');
       
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(409);
       expect(response.body).toHaveProperty('message', 'You are already following this user');
       
       // Verify only one follow relationship exists
@@ -108,7 +109,7 @@ describe('Follow API - Integration Tests', () => {
     });
   });
   
-  describe('DELETE /api/follow/:id', () => {
+  describe('DELETE /api/follow/:userId', () => {
     it('should remove a follow relationship', async () => {
       // First create a follow relationship
       await request(app)
@@ -139,7 +140,7 @@ describe('Follow API - Integration Tests', () => {
     });
   });
   
-  describe('GET /api/follow/:id/status', () => {
+  describe('GET /api/follow/:userId/status', () => {
     it('should return correct follow status', async () => {
       // Check when not following
       let response = await request(app)
@@ -164,7 +165,7 @@ describe('Follow API - Integration Tests', () => {
     });
   });
   
-  describe('GET /api/follow/:id/followers', () => {
+  describe('GET /api/follow/:userId/followers', () => {
     it('should return list of followers', async () => {
       // Create a follow relationship
       await request(app)
@@ -192,14 +193,14 @@ describe('Follow API - Integration Tests', () => {
     });
   });
   
-  describe('GET /api/follow/:id/following', () => {
+  describe('GET /api/follow/:userId/following', () => {
     it('should return list of users being followed', async () => {
       // Create a follow relationship
       await request(app)
         .post(`/api/follow/${user2Id}`)
         .set('Content-Type', 'application/json');
       
-      // Get user1's following
+      // Get user1's following list
       const response = await request(app)
         .get(`/api/follow/${user1Id}/following`)
         .set('Content-Type', 'application/json');

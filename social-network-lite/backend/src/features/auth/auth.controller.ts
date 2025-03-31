@@ -4,7 +4,11 @@
  */
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
-import { AuthService, LoginUserRequest, RegisterUserRequest } from './auth.service';
+import {
+  AuthService,
+  LoginUserRequest,
+  RegisterUserRequest,
+} from './auth.service';
 
 /**
  * Controller for handling authentication-related HTTP requests
@@ -118,4 +122,4 @@ export class AuthController {
       }
     }
   };
-} 
+}

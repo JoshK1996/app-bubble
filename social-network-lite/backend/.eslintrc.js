@@ -1,4 +1,4 @@
-/** 
+/**
  * ESLint configuration for the Social Network Lite backend
  * Following the Airbnb TypeScript Style Guide
  */
@@ -25,4 +25,4 @@ module.exports = {
     node: true,
     jest: true,
   },
-}; 
+};

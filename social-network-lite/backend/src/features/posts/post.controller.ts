@@ -4,7 +4,11 @@
  */
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
-import { CreatePostRequest, PostService, UpdatePostRequest } from './post.service';
+import {
+  CreatePostRequest,
+  PostService,
+  UpdatePostRequest,
+} from './post.service';
 
 /**
  * Controller for handling post-related HTTP requests
@@ -93,7 +97,7 @@ export class PostController {
    */
   getUserPosts = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = req.params.userId;
+      const { userId } = req.params;
 
       // Get user posts
       const posts = await this.postService.getUserPosts(userId);
@@ -159,7 +163,7 @@ export class PostController {
       }
 
       const postId = req.params.id;
-      const userId = req.user.userId;
+      const { userId } = req.user;
 
       // Extract update data from request body
       const updateData: UpdatePostRequest = {
@@ -167,7 +171,11 @@ export class PostController {
       };
 
       // Update post
-      const updatedPost = await this.postService.updatePost(postId, userId, updateData);
+      const updatedPost = await this.postService.updatePost(
+        postId,
+        userId,
+        updateData,
+      );
 
       // Return success response
       res.status(200).json(updatedPost);
@@ -175,7 +183,10 @@ export class PostController {
       // Handle authorization, not found, or other errors
       if (error instanceof Error && error.message === 'Post not found') {
         res.status(404).json({ message: error.message });
-      } else if (error instanceof Error && error.message === 'Not authorized to update this post') {
+      } else if (
+        error instanceof Error
+        && error.message === 'Not authorized to update this post'
+      ) {
         res.status(403).json({ message: error.message });
       } else if (error instanceof Error) {
         res.status(400).json({ message: error.message });
@@ -199,7 +210,7 @@ export class PostController {
       }
 
       const postId = req.params.id;
-      const userId = req.user.userId;
+      const { userId } = req.user;
 
       // Delete post
       await this.postService.deletePost(postId, userId);
@@ -210,7 +221,10 @@ export class PostController {
       // Handle authorization, not found, or other errors
       if (error instanceof Error && error.message === 'Post not found') {
         res.status(404).json({ message: error.message });
-      } else if (error instanceof Error && error.message === 'Not authorized to delete this post') {
+      } else if (
+        error instanceof Error
+        && error.message === 'Not authorized to delete this post'
+      ) {
         res.status(403).json({ message: error.message });
       } else if (error instanceof Error) {
         res.status(400).json({ message: error.message });
@@ -219,4 +233,4 @@ export class PostController {
       }
     }
   };
-} 
+}
