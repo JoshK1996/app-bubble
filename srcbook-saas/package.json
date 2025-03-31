@@ -1,0 +1,35 @@
+{
+  "name": "srcbook-saas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SrcBook SaaS Platform - Full-featured code management and deployment platform",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev": "npm run dev:api || npm run dev:web",
+    "dev:api": "cd packages/api && npm run dev",
+    "dev:web": "cd packages/web && npm run dev",
+    "setup": "node scripts/setup.js",
+    "test": "npm run test --workspaces",
+    "clean": "rimraf packages/*/dist packages/*/node_modules node_modules",
+    "lint": "npm run lint --workspaces",
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "rimraf": "^5.0.1",
+    "typescript": "^5.1.6"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "author": "SrcBook Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/srcbookdev/srcbook-saas.git"
+  }
+}

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SrcBook SaaS Platform Demo</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --secondary: #64748b;
+      --secondary-light: #94a3b8;
+      --neutral-50: #f8fafc;
+      --neutral-100: #f1f5f9;
+      --neutral-200: #e2e8f0;
+      --neutral-300: #cbd5e1;
+      --neutral-700: #334155;
+      --neutral-800: #1e293b;
+      --neutral-900: #0f172a;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --border-radius: 8px;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5;
+      color: var(--neutral-800);
+      background-color: var(--neutral-100);
+      padding: 0;
+      margin: 0;
+    }
+    
+    header {
+      background-color: var(--neutral-900);
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-md);
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    
+    .logo span {
+      margin-left: 0.5rem;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    h1 {
+      margin-bottom: 1rem;
+      color: var(--neutral-900);
+    }
+    
+    h2 {
+      margin-bottom: 1rem;
+      color: var(--neutral-800);
+      font-size: 1.5rem;
+    }
+    
+    p {
+      margin-bottom: 1.5rem;
+      color: var(--neutral-700);
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      grid-gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .card {
+      background-color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      padding: 1.5rem;
+      transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .card-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    .card-header i {
+      margin-right: 0.75rem;
+      font-size: 1.25rem;
+      color: var(--primary);
+    }
+    
+    .card-content {
+      margin-bottom: 1rem;
+    }
+    
+    .card-footer {
+      display: flex;
+      justify-content: flex-end;
+    }
+    
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem 1rem;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--border-radius);
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+    }
+    
+    .button:hover {
+      background-color: var(--primary-hover);
+    }
+    
+    .button i {
+      margin-right: 0.5rem;
+    }
+    
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.5rem;
+    }
+    
+    .table th, .table td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--neutral-200);
+    }
+    
+    .table th {
+      background-color: var(--neutral-100);
+      font-weight: 600;
+    }
+    
+    .status {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    
+    .status-success {
+      background-color: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+    }
+    
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    
+    .form-label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--neutral-700);
+    }
+    
+    .form-input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--neutral-300);
+      border-radius: var(--border-radius);
+      font-size: 1rem;
+      transition: border-color 0.2s ease-in-out;
+    }
+    
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    
+    .pre-box {
+      background-color: var(--neutral-800);
+      color: var(--neutral-100);
+      padding: 1rem;
+      border-radius: var(--border-radius);
+      overflow: auto;
+      font-family: monospace;
+      margin-bottom: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <i class="fas fa-code-branch"></i>
+      <span>SrcBook</span>
+    </div>
+  </header>
+  
+  <div class="container">
+    <h1>SrcBook SaaS Platform Demo</h1>
+    <p>A comprehensive platform for managing code repositories, deployments, and team collaboration.</p>
+    
+    <div class="grid">
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-heartbeat"></i>
+          <h2>API Status</h2>
+        </div>
+        <div class="card-content">
+          <div class="status status-success">
+            <span id="api-status">The API server is running correctly.</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button class="button" onclick="checkHealth()">
+            <i class="fas fa-sync"></i> Check Health
+          </button>
+        </div>
+        <div id="health-result" class="pre-box" style="display: none;"></div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-plug"></i>
+          <h2>Available Endpoints</h2>
+        </div>
+        <div class="card-content">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Method</th>
+                <th>Endpoint</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>GET</td>
+                <td>/health</td>
+                <td>API health check</td>
+              </tr>
+              <tr>
+                <td>POST</td>
+                <td>/api/auth/login</td>
+                <td>User login</td>
+              </tr>
+              <tr>
+                <td>GET</td>
+                <td>/api/users/me</td>
+                <td>Current user profile</td>
+              </tr>
+              <tr>
+                <td>GET</td>
+                <td>/api/users</td>
+                <td>List all users</td>
+              </tr>
+              <tr>
+                <td>GET</td>
+                <td>/api/workspaces</td>
+                <td>List all workspaces</td>
+              </tr>
+              <tr>
+                <td>GET</td>
+                <td>/api/workspaces/:id</td>
+                <td>Get workspace details</td>
+              </tr>
+              <tr>
+                <td>GET</td>
+                <td>/api/projects</td>
+                <td>List all projects</td>
+              </tr>
+              <tr>
+                <td>GET</td>
+                <td>/api/workspaces/:workspaceId/projects</td>
+                <td>List workspace projects</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-sign-in-alt"></i>
+          <h2>Test Login</h2>
+        </div>
+        <div class="card-content">
+          <div class="form-group">
+            <label class="form-label" for="email">Email:</label>
+            <input type="email" id="email" class="form-input" value="admin@example.com" placeholder="Enter your email">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="password">Password:</label>
+            <input type="password" id="password" class="form-input" placeholder="Enter your password">
+          </div>
+        </div>
+        <div class="card-footer">
+          <button class="button" onclick="login()">
+            <i class="fas fa-lock"></i> Login
+          </button>
+        </div>
+        <div id="login-result" class="pre-box" style="display: none;"></div>
+      </div>
+    </div>
+    
+    <div class="grid">
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-project-diagram"></i>
+          <h2>Workspaces</h2>
+        </div>
+        <div class="card-content">
+          <p>Access and manage your development workspaces.</p>
+        </div>
+        <div class="card-footer">
+          <button class="button" onclick="getWorkspaces()">
+            <i class="fas fa-list"></i> Get Workspaces
+          </button>
+        </div>
+        <div id="workspaces-result" class="pre-box" style="display: none;"></div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-code"></i>
+          <h2>Projects</h2>
+        </div>
+        <div class="card-content">
+          <p>View all projects across workspaces.</p>
+        </div>
+        <div class="card-footer">
+          <button class="button" onclick="getProjects()">
+            <i class="fas fa-list"></i> Get Projects
+          </button>
+        </div>
+        <div id="projects-result" class="pre-box" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Helper function to show API results
+    function showResult(elementId, data) {
+      const element = document.getElementById(elementId);
+      element.textContent = JSON.stringify(data, null, 2);
+      element.style.display = 'block';
+    }
+    
+    // Check API health
+    async function checkHealth() {
+      try {
+        const response = await fetch('/health');
+        const data = await response.json();
+        showResult('health-result', data);
+        
+        // Update status
+        document.getElementById('api-status').textContent = 'The API server is running correctly.';
+      } catch (error) {
+        console.error('Error checking health:', error);
+        document.getElementById('api-status').textContent = 'Error connecting to API server.';
+        showResult('health-result', { error: error.message });
+      }
+    }
+    
+    // Login
+    async function login() {
+      try {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        showResult('login-result', data);
+        
+        // Store token if login successful
+        if (data.success) {
+          localStorage.setItem('token', data.token);
+        }
+      } catch (error) {
+        console.error('Error logging in:', error);
+        showResult('login-result', { error: error.message });
+      }
+    }
+    
+    // Get workspaces
+    async function getWorkspaces() {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        
+        const response = await fetch('/api/workspaces', { headers });
+        const data = await response.json();
+        showResult('workspaces-result', data);
+      } catch (error) {
+        console.error('Error getting workspaces:', error);
+        showResult('workspaces-result', { error: error.message });
+      }
+    }
+    
+    // Get projects
+    async function getProjects() {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        
+        const response = await fetch('/api/projects', { headers });
+        const data = await response.json();
+        showResult('projects-result', data);
+      } catch (error) {
+        console.error('Error getting projects:', error);
+        showResult('projects-result', { error: error.message });
+      }
+    }
+    
+    // Check health on page load
+    document.addEventListener('DOMContentLoaded', checkHealth);
+  </script>
+</body>
+</html>
