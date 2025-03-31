@@ -24,6 +24,8 @@ model User {
   boards         Board[]          // Boards created by this user
   ownedBoards    Board[]          @relation("BoardOwner")
   assignedTasks  Task[]           @relation("TaskAssignee")
+  messages       Message[]        @relation("MessageSender")
+  participants   Participant[]
 
   @@map("users")
 }
@@ -83,5 +85,44 @@ model Task {
   assigneeId  String?   @map("assignee_id")
 
   @@map("tasks")
+}
+
+// Chat models for the chat functionality
+model ChatRoom {
+  id          String        @id @default(uuid())
+  name        String?       // Optional for group chats
+  type        String        @default("direct") // "direct" or "group"
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  messages    Message[]
+  participants Participant[]
+
+  @@map("chat_rooms")
+}
+
+model Message {
+  id          String      @id @default(uuid())
+  content     String
+  createdAt   DateTime    @default(now()) @map("created_at")
+  sender      User        @relation("MessageSender", fields: [senderId], references: [id])
+  senderId    String      @map("sender_id")
+  chatRoom    ChatRoom    @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  chatRoomId  String      @map("chat_room_id")
+
+  @@map("chat_messages")
+}
+
+model Participant {
+  id          String      @id @default(uuid())
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String      @map("user_id")
+  chatRoom    ChatRoom    @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  chatRoomId  String      @map("chat_room_id")
+  isAdmin     Boolean     @default(false) @map("is_admin")
+  joinedAt    DateTime    @default(now()) @map("joined_at")
+  lastRead    DateTime    @default(now()) @map("last_read")
+
+  @@unique([chatRoomId, userId]) // User can only be in a chat room once
+  @@map("chat_participants")
 } 
 
