@@ -18,8 +18,8 @@ import config from '@config/config';
 // Import routes
 import userRoutes from '@features/users/user.routes';
 import productRoutes from '@features/products/product.routes';
+import cartRoutes from '@features/cart/cart.routes';
 // Import additional routes here
-// import cartRoutes from '@features/cart/cart.routes';
 // import orderRoutes from '@features/orders/order.routes';
 
 // Initialize Express app
@@ -41,6 +41,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Compress all responses
+// @ts-ignore - Known TS issue with compression types
 app.use(compression());
 
 // HTTP request logging
@@ -78,7 +79,7 @@ app.get('/health', (req: Request, res: Response) => {
 // Mount API Routes
 app.use(`${API_PREFIX}/users`, userRoutes);
 app.use(`${API_PREFIX}/products`, productRoutes);
-// app.use(`${API_PREFIX}/cart`, cartRoutes);
+app.use(`${API_PREFIX}/cart`, cartRoutes);
 // app.use(`${API_PREFIX}/orders`, orderRoutes);
 
 // Root path handler - Redirect to API docs or show basic info
