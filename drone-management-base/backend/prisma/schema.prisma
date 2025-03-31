@@ -1,0 +1,293 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model with role-based access control
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  password       String
+  firstName      String
+  lastName       String
+  role           Role     @default(VIEWER)
+  phone          String?
+  profilePicture String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  drones         Drone[]       @relation("DroneOwner")
+  missions       Mission[]     @relation("MissionCreator")
+  pilotMissions  Mission[]     @relation("MissionPilot")
+  droneLocations DroneLocation[] @relation("LocationTracker")
+  maintenanceLogs MaintenanceLog[] @relation("MaintenanceCreator")
+
+  @@map("users")
+}
+
+// Role enum for user permissions
+enum Role {
+  ADMIN
+  OPERATOR
+  PILOT
+  VIEWER
+}
+
+// Drone model representing a physical drone
+model Drone {
+  id                String   @id @default(uuid())
+  name              String
+  model             String
+  manufacturer      String
+  serialNumber      String   @unique
+  purchaseDate      DateTime
+  status            DroneStatus @default(AVAILABLE)
+  batteryLevel      Int?     // Percentage
+  lastMaintenance   DateTime?
+  nextMaintenanceDue DateTime?
+  flightHours       Float    @default(0)
+  maxFlightTime     Int      // Minutes
+  maxSpeed          Int      // km/h
+  maxAltitude       Int      // meters
+  maxRange          Int      // kilometers
+  weightCapacity    Float?   // kg
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  userId            String   // Owner/admin
+
+  // Relations
+  user              User     @relation("DroneOwner", fields: [userId], references: [id])
+  missions          Mission[] @relation("DroneMission")
+  components        Component[] @relation("DroneComponent")
+  locations         DroneLocation[] @relation("DroneLocationHistory")
+  maintenanceLogs   MaintenanceLog[] @relation("DroneMaintenanceLogs")
+
+  @@map("drones")
+}
+
+// Drone status enum
+enum DroneStatus {
+  AVAILABLE
+  MAINTENANCE
+  IN_MISSION
+  CHARGING
+  OFFLINE
+  DAMAGED
+}
+
+// Component model for tracking drone parts
+model Component {
+  id               String   @id @default(uuid())
+  name             String
+  type             ComponentType
+  manufacturer     String
+  serialNumber     String?
+  purchaseDate     DateTime
+  installationDate DateTime
+  hoursUsed        Float    @default(0)
+  status           ComponentStatus @default(OPERATIONAL)
+  lastMaintenance  DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  droneId          String
+
+  // Relations
+  drone            Drone    @relation("DroneComponent", fields: [droneId], references: [id])
+  maintenanceLogs  MaintenanceLog[] @relation("ComponentMaintenanceLogs")
+
+  @@map("components")
+}
+
+// Component type enum
+enum ComponentType {
+  BATTERY
+  MOTOR
+  PROPELLER
+  CAMERA
+  GPS
+  CONTROLLER
+  OTHER
+}
+
+// Component status enum
+enum ComponentStatus {
+  OPERATIONAL
+  NEEDS_MAINTENANCE
+  DAMAGED
+  REPLACED
+}
+
+// Mission model for planned drone operations
+model Mission {
+  id                 String   @id @default(uuid())
+  name               String
+  description        String?
+  status             MissionStatus @default(PLANNED)
+  startTime          DateTime?
+  endTime            DateTime?
+  actualStartTime    DateTime?
+  actualEndTime      DateTime?
+  flightDuration     Int?     // Minutes
+  flightDistance     Float?   // Kilometers
+  maxAltitude        Int?     // Meters reached during mission
+  createdById        String
+  pilotId            String?
+  droneId            String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relations
+  createdBy          User     @relation("MissionCreator", fields: [createdById], references: [id])
+  pilot              User?    @relation("MissionPilot", fields: [pilotId], references: [id])
+  drone              Drone    @relation("DroneMission", fields: [droneId], references: [id])
+  waypoints          Waypoint[] @relation("MissionWaypoints")
+  missionLogs        MissionLog[] @relation("MissionLogHistory")
+
+  @@map("missions")
+}
+
+// Mission status enum
+enum MissionStatus {
+  PLANNED
+  APPROVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+// Waypoint model for mission flight paths
+model Waypoint {
+  id           String   @id @default(uuid())
+  order        Int
+  latitude     Float
+  longitude    Float
+  altitude     Int      // Meters
+  speed        Int?     // km/h for this segment
+  action       WaypointAction @default(PASS_THROUGH)
+  hoverTime    Int?     // Seconds to hover
+  heading      Int?     // Degrees (0-359)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  missionId    String
+
+  // Relations
+  mission      Mission  @relation("MissionWaypoints", fields: [missionId], references: [id])
+
+  @@map("waypoints")
+}
+
+// Waypoint action enum
+enum WaypointAction {
+  PASS_THROUGH
+  HOVER
+  TAKE_PHOTO
+  START_RECORDING
+  STOP_RECORDING
+  LAND
+  TAKEOFF
+  RETURN_TO_HOME
+}
+
+// Drone location for real-time tracking
+model DroneLocation {
+  id           String   @id @default(uuid())
+  latitude     Float
+  longitude    Float
+  altitude     Int      // Meters
+  speed        Int?     // km/h
+  heading      Int?     // Degrees (0-359)
+  batteryLevel Int?     // Percentage
+  timestamp    DateTime @default(now())
+  droneId      String
+  trackerId    String
+
+  // Relations
+  drone        Drone    @relation("DroneLocationHistory", fields: [droneId], references: [id])
+  tracker      User     @relation("LocationTracker", fields: [trackerId], references: [id])
+
+  @@map("drone_locations")
+}
+
+// Mission log for events during mission
+model MissionLog {
+  id           String   @id @default(uuid())
+  eventType    MissionEventType
+  description  String
+  timestamp    DateTime @default(now())
+  latitude     Float?
+  longitude    Float?
+  altitude     Int?     // Meters
+  batteryLevel Int?     // Percentage at event time
+  missionId    String
+
+  // Relations
+  mission      Mission  @relation("MissionLogHistory", fields: [missionId], references: [id])
+
+  @@map("mission_logs")
+}
+
+// Mission event type enum
+enum MissionEventType {
+  TAKEOFF
+  LANDING
+  WAYPOINT_REACHED
+  BATTERY_LOW
+  MISSION_STARTED
+  MISSION_COMPLETED
+  MISSION_ABORTED
+  ERROR
+  MANUAL_CONTROL
+  RETURN_TO_HOME
+  WEATHER_WARNING
+}
+
+// Maintenance log for drones and components
+model MaintenanceLog {
+  id                String   @id @default(uuid())
+  maintenanceType   MaintenanceType
+  description       String
+  partsReplaced     String?
+  cost              Float?
+  performedAt       DateTime @default(now())
+  scheduledFor      DateTime?
+  status            MaintenanceStatus @default(COMPLETED)
+  createdById       String
+  droneId           String?
+  componentId       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  createdBy         User     @relation("MaintenanceCreator", fields: [createdById], references: [id])
+  drone             Drone?   @relation("DroneMaintenanceLogs", fields: [droneId], references: [id])
+  component         Component? @relation("ComponentMaintenanceLogs", fields: [componentId], references: [id])
+
+  @@map("maintenance_logs")
+}
+
+// Maintenance type enum
+enum MaintenanceType {
+  ROUTINE
+  REPAIR
+  INSPECTION
+  CALIBRATION
+  SOFTWARE_UPDATE
+  HARDWARE_UPGRADE
+}
+
+// Maintenance status enum
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+} 

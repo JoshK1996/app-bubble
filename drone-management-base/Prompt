@@ -1,0 +1,124 @@
+Develop a comprehensive drone business management application.
+
+**Application Overview:**
+
+The application is designed to streamline the operations of a drone service business. It provides a centralized platform for managing all aspects of the business, from mission planning and client management to financial reporting and equipment maintenance. The user interface should be intuitive, visually appealing, and responsive. The implementation should strongly leverage existing GitHub repositories, adhering to the GitHub MCP (as defined in the rules sheet).
+
+**Key Priorities:**
+
+1.  Bug-Free Operation
+2.  User-Friendliness
+3.  GitHub Integration
+4.  Feature Preservation
+
+**Features and Detailed Page/Function Descriptions:**
+
+1.  Dashboard:
+    *   Purpose: Real-time business overview.
+    *   Content: Financial summary, upcoming missions, drone status, client overview, compliance status, weather.
+    *   Interactivity: Clickable charts, quick actions.
+
+2.  Mission Management:
+    *   Purpose: Plan, schedule, and track drone missions.
+    *   Content: Mission list, mission details, creation/editing form.
+    *   Interactivity: Drag-and-drop scheduling, map integration, status updates.
+
+3.  Client Management:
+    *   Purpose: Manage client information and communication.
+    *   Content: Client list, client profile, creation/editing form.
+    *   Interactivity: Communication log, document upload/download.
+
+4.  Contract System:
+    *   Purpose: AI-powered contract generation and management.
+    *   Content: Contract list, contract details, generation form.
+    *   Interactivity: AI generation, digital signature, version control.
+
+5.  Financial Management:
+    *   Purpose: Invoicing, expense tracking, and reporting.
+    *   Content: Invoice list, invoice details, expense list, financial reports.
+    *   Interactivity: Automated invoice generation, online payments, customizable reports.
+
+6.  Equipment Management:
+    *   Purpose: Track drone equipment, maintenance, and certifications.
+    *   Content: Equipment list, equipment details, maintenance scheduling.
+    *   Interactivity: Automated reminders, flight hour tracking.
+
+7.  Compliance & Documentation:
+    *   Purpose: Manage FAA licenses, flight logs, and safety documentation.
+    *   Content: License list, flight log, safety documentation.
+    *   Interactivity: Automated reminders, flight log entry.
+
+8.  Reporting & Analytics:
+    *   Purpose: Generate reports on business performance.
+    *   Content: Revenue analysis, mission statistics, client analytics.
+    *   Interactivity: Customizable filters, data visualization.
+
+9.  Settings & Customization:
+    *   Purpose: Customize application behavior and appearance.
+    *   Content: Business profile, user management, theme customization, notification preferences, system preferences.
+
+10. User Profile:
+    *   Purpose: Allows users to define their personal business profile.
+    *   Content: Business Name, Address, Contact Information, Logo, Signature, FAA License Information
+
+11. Theme Customization:
+    *   Purpose: Offers theme options (light/dark) and color customization.
+    *   Content: Light/Dark Theme Toggle, Color Picker
+
+**Development Phases:**
+
+**PHASE 1: Foundational Setup & System Log Implementation**
+
+1.  Objective: Set up project, implement system log for error detection.
+    *   1.1: Project structure (React, etc.). *Consider GitHub-based boilerplate.*
+    *   1.2: Implement a system log, adhering to the Rules Sheet and prioritizing GitHub integration (Error Logging repos such as Sentry or Logrocket). *Execute GitHub MCP.*
+    *   1.3: Implement automated error detection, root cause analysis, solution suggestions.
+    *   1.4: Generate copy-paste-able prompts for developer action.
+    *   1.5: Validate the logging system's performance. Act as Desktop Commander to monitor system impact.
+
+**PHASE 2: UI Design & Implementation**
+
+2.  Objective: Design user-friendly Glassmorphism UI.
+    *   2.1: Core UI framework. *Prioritize GitHub-based UI component libraries.*
+    *   2.2: Implement pages/functions (Dashboard, Mission Management, etc.).
+        *   Dashboard: Real-time data, urgent information.
+        *   Mission Management: Calendar, Weather API.
+        *   User Profile/Theme: Simple UI for customization.
+        *   Data Input: Intuitive forms.
+    *   2.3: Test UI for responsiveness, accessibility, and performance.
+
+**PHASE 3: Core Feature Implementation & Integration**
+
+3.  Objective: Implement core features, ensure data flow and robust functionality.
+    *   3.1: Implement the Mission Management, Client Management, Contract System, Financial Management, Equipment Management, and Compliance & Documentation features.
+    *   3.2: Integrate these features with the UI.
+    *   3.3: Ensure proper data validation, error handling, and security measures are implemented.
+    *   3.4: Thoroughly test all features to ensure they function correctly and meet the project requirements.
+
+**PHASE 4: Reporting & Analytics & AI Enhancement**
+
+4.  Objective: Implement reporting, enhance AI.
+    *   4.1: Implement the Reporting & Analytics feature, ensuring data is visualized effectively. *Consider Github visualization software.*
+    *   4.2: Enhance the AI-powered Contract System with improved data extraction and contract generation capabilities. *Consider AI/NLP libraries to help.*
+    *   4.3: Refine the AI's error detection and solution suggestion capabilities, using data from the system log to improve its accuracy and effectiveness.
+    *   4.4: Explore opportunities for AI-assisted scheduling, automated weather checks, drone flight path optimization, and other smart features.
+
+**PHASE 5: Refinement, Optimization, and Testing**
+
+5.  Objective: Refine, optimize, and test the application.
+    *   5.1: Conduct a comprehensive review of the entire application.
+    *   5.2: Optimize the application's performance. Act as Desktop Commander to monitor the performance.
+    *   5.3: Conduct thorough testing.
+    *   5.4: Document the application.
+    *   5.5: Prepare for deployment.
+
+Remember to:
+* Read all rules (in the `rules_sheet.md` file) before every thought and action.
+* Consider the existing code for the functions.
+* Adapt the design.
+* Consider GitHub MCPS in every step.
+* Act as "Desktop Commander" and consider system health.
+
+**Initialization:**
+
+Before taking any action, state: "MCP (Manual Cognitive Procedure) Initiated. I have reviewed the complete `main_prompt.txt` document and the `rules_sheet.md` file and am ready to proceed. My initial focus will be on Phase 1, specifically setting up the project structure and selecting a suitable logging library. I will act as Desktop Commander to monitor resources and I will carefully perform the GitHub MCP." Describe the initial steps you will take to execute the tasks, including how you will utilize the GitHub MCP for library selection.

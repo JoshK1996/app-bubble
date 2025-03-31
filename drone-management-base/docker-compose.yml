@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # Backend API service
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - DATABASE_TYPE=${DATABASE_TYPE:-postgres}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:password@postgres:5432/drone_management}
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongo:27017/drone_management}
+      - JWT_SECRET=${JWT_SECRET:-dev_secret_key_change_in_production}
+      - CORS_ORIGIN=http://localhost:3000
+    depends_on:
+      - postgres
+      - mongo
+    networks:
+      - drone_network
+    command: npm run dev
+
+  # Frontend service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:5000/api/v1
+    depends_on:
+      - api
+    networks:
+      - drone_network
+    command: npm run dev
+
+  # PostgreSQL database service
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=drone_management
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - drone_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MongoDB database service
+  mongo:
+    image: mongo:6
+    environment:
+      - MONGO_INITDB_DATABASE=drone_management
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - drone_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/drone_management --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  drone_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongo_data: 
