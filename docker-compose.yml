@@ -1,0 +1,141 @@
+version: '3'
+
+services:
+  # Frontend services
+  react-app:
+    build:
+      context: ./frameworks/frontend/react-app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frameworks/frontend/react-app:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm start
+
+  vue-app:
+    build:
+      context: ./frameworks/frontend/vue-app
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./frameworks/frontend/vue-app:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run dev
+
+  angular-app:
+    build:
+      context: ./frameworks/frontend/angular-app/angular-project
+    ports:
+      - "3002:4200"
+    volumes:
+      - ./frameworks/frontend/angular-app/angular-project:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm start
+
+  nextjs-app:
+    build:
+      context: ./frameworks/frontend/nextjs-app
+    ports:
+      - "3003:3000"
+    volumes:
+      - ./frameworks/frontend/nextjs-app:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run dev
+
+  # Backend services
+  express-api:
+    build:
+      context: ./frameworks/backend/express
+    ports:
+      - "4000:3000"
+    volumes:
+      - ./frameworks/backend/express:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongo:27017/app_bubble_db
+    depends_on:
+      - mongo
+    command: node index.js
+
+  flask-api:
+    build:
+      context: ./frameworks/backend/flask
+    ports:
+      - "4001:5000"
+    volumes:
+      - ./frameworks/backend/flask:/app
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=app.py
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/app_bubble_db
+    depends_on:
+      - postgres
+    command: flask run --host=0.0.0.0
+
+  fastapi-api:
+    build:
+      context: ./frameworks/backend/fastapi
+    ports:
+      - "4002:8000"
+    volumes:
+      - ./frameworks/backend/fastapi:/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/app_bubble_db
+    depends_on:
+      - postgres
+    command: uvicorn main:app --host 0.0.0.0 --reload
+
+  spring-api:
+    build:
+      context: ./frameworks/backend/spring-boot
+    ports:
+      - "4003:8080"
+    volumes:
+      - ./frameworks/backend/spring-boot:/app
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/app_bubble_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+    depends_on:
+      - postgres
+
+  # Database services
+  postgres:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=app_bubble_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./frameworks/database/sql/postgresql_schema.sql:/docker-entrypoint-initdb.d/init.sql
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:

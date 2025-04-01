@@ -1,0 +1,66 @@
+{
+  "users": {
+    "user1": {
+      "username": "user1",
+      "email": "user1@example.com",
+      "password_hash": "hashed_password_1",
+      "created_at": 1672531200,
+      "updated_at": 1672531200
+    },
+    "user2": {
+      "username": "user2",
+      "email": "user2@example.com",
+      "password_hash": "hashed_password_2",
+      "created_at": 1672617600,
+      "updated_at": 1672617600
+    }
+  },
+  "posts": {
+    "post1": {
+      "user_id": "user1",
+      "title": "First Post",
+      "content": "This is the content of the first post",
+      "created_at": 1672704000,
+      "updated_at": 1672704000
+    },
+    "post2": {
+      "user_id": "user1",
+      "title": "Second Post",
+      "content": "This is the content of the second post",
+      "created_at": 1672790400,
+      "updated_at": 1672790400
+    },
+    "post3": {
+      "user_id": "user2",
+      "title": "Another Post",
+      "content": "This is a post from another user",
+      "created_at": 1672876800,
+      "updated_at": 1672876800
+    }
+  },
+  "post_tags": {
+    "post1": ["technology", "programming"],
+    "post2": ["programming", "web development"],
+    "post3": ["technology"]
+  },
+  "comments": {
+    "comment1": {
+      "post_id": "post1",
+      "user_id": "user2",
+      "content": "Great post!",
+      "created_at": 1672740000
+    },
+    "comment2": {
+      "post_id": "post1",
+      "user_id": "user1",
+      "content": "Thanks for the feedback!",
+      "created_at": 1672743600
+    },
+    "comment3": {
+      "post_id": "post2",
+      "user_id": "user2",
+      "content": "Interesting thoughts",
+      "created_at": 1672826400
+    }
+  }
+}
