@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useZxing } from 'react-zxing';
 import { API } from 'aws-amplify';
@@ -19,10 +19,13 @@ import {
   DialogActions,
   DialogContent,
   DialogContentText,
-  DialogTitle
+  DialogTitle,
+  Snackbar
 } from '@mui/material';
+import { WiFiOff as WiFiOffIcon } from '@mui/icons-material';
 import { materialByQrCode } from '../graphql/queries';
 import { updateMaterialStatus } from '../graphql/mutations';
+import * as syncManager from '../offline/syncManager';
 
 function ScanPage() {
   const navigate = useNavigate();
@@ -34,6 +37,35 @@ function ScanPage() {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [notes, setNotes] = useState('');
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [offlineSnackbarOpen, setOfflineSnackbarOpen] = useState(false);
+  const [offlineActionQueued, setOfflineActionQueued] = useState(false);
+
+  // Set up online/offline event listeners
+  useEffect(() => {
+    syncManager.setupNetworkListeners(
+      // Online callback
+      () => {
+        setIsOffline(false);
+        // Try to sync any pending operations
+        syncManager.syncPendingOperations().catch(console.error);
+      },
+      // Offline callback
+      () => {
+        setIsOffline(true);
+        setOfflineSnackbarOpen(true);
+      }
+    );
+    
+    // Initialize offline status
+    setIsOffline(!syncManager.isOnline());
+    
+    return () => {
+      // Cleanup event listeners (note: not all browsers support this)
+      window.removeEventListener('online', null);
+      window.removeEventListener('offline', null);
+    };
+  }, []);
 
   // React-zxing hook for QR code scanning
   const { ref } = useZxing({
@@ -52,21 +84,41 @@ function ScanPage() {
     setError('');
     
     try {
-      // Call the GraphQL API to get material by QR code
-      const response = await API.graphql({
-        query: materialByQrCode,
-        variables: { 
-          qrCodeData: qrData,
-          limit: 1
+      if (isOffline) {
+        // Try to find the material in the local cache
+        const cachedMaterial = await syncManager.getCachedMaterialByQrCode(qrData);
+        
+        if (cachedMaterial) {
+          setMaterial(cachedMaterial);
+        } else {
+          setError('Material not found in offline cache. Please try again when online.');
         }
-      });
-      
-      const items = response.data.materialByQrCode.items;
-      
-      if (items && items.length > 0) {
-        setMaterial(items[0]);
       } else {
-        setError('Material not found with this QR code');
+        // Online mode - call the GraphQL API
+        const response = await API.graphql({
+          query: materialByQrCode,
+          variables: { 
+            qrCodeData: qrData,
+            limit: 1
+          }
+        });
+        
+        const items = response.data.materialByQrCode.items;
+        
+        if (items && items.length > 0) {
+          const fetchedMaterial = items[0];
+          setMaterial(fetchedMaterial);
+          
+          // Cache the material for offline use
+          await syncManager.cacheMaterial(fetchedMaterial);
+          
+          // If the material has a job, cache that too
+          if (fetchedMaterial.job) {
+            await syncManager.cacheJob(fetchedMaterial.job);
+          }
+        } else {
+          setError('Material not found with this QR code');
+        }
       }
       
       setLoading(false);
@@ -95,20 +147,48 @@ function ScanPage() {
 
   const handleUpdateStatus = async (newStatus, notes) => {
     setLoading(true);
+    setOfflineActionQueued(false);
     
     try {
-      // Call the GraphQL API to update material status
-      const response = await API.graphql({
-        query: updateMaterialStatus,
-        variables: { 
-          materialId: material.id, 
-          status: newStatus,
-          notes: notes
-        }
-      });
+      const variables = { 
+        materialId: material.id, 
+        status: newStatus,
+        notes: notes
+      };
       
-      const updatedMaterial = response.data.updateMaterialStatus;
-      setMaterial(updatedMaterial);
+      if (isOffline) {
+        // Queue the operation for later sync
+        await syncManager.queueOperation(
+          syncManager.OPERATION_TYPES.UPDATE_MATERIAL_STATUS,
+          {
+            mutation: updateMaterialStatus,
+            variables
+          }
+        );
+        
+        // Update the local cache immediately
+        const updatedMaterial = {
+          ...material,
+          status: newStatus
+        };
+        
+        await syncManager.cacheMaterial(updatedMaterial);
+        setMaterial(updatedMaterial);
+        setOfflineActionQueued(true);
+      } else {
+        // Online mode - call the GraphQL API directly
+        const response = await API.graphql({
+          query: updateMaterialStatus,
+          variables
+        });
+        
+        const updatedMaterial = response.data.updateMaterialStatus;
+        setMaterial(updatedMaterial);
+        
+        // Update cache for offline use
+        await syncManager.cacheMaterial(updatedMaterial);
+      }
+      
       setLoading(false);
     } catch (err) {
       console.error('Error updating status:', err);
@@ -159,6 +239,16 @@ function ScanPage() {
 
   return (
     <Box>
+      {isOffline && (
+        <Alert 
+          severity="warning" 
+          icon={<WiFiOffIcon />}
+          sx={{ mb: 2 }}
+        >
+          You are currently offline. Limited functionality is available.
+        </Alert>
+      )}
+      
       <Typography variant="h4" component="h1" gutterBottom>
         QR Code Scanner
       </Typography>
@@ -328,6 +418,11 @@ function ScanPage() {
         <DialogContent>
           <DialogContentText>
             Are you sure you want to update the status to {formatStatus(selectedStatus)}?
+            {isOffline && (
+              <Box component="span" sx={{ display: 'block', mt: 1, color: 'warning.main' }}>
+                You are offline. This change will be applied when you reconnect.
+              </Box>
+            )}
           </DialogContentText>
           <TextField
             autoFocus
@@ -348,6 +443,22 @@ function ScanPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Offline Snackbar */}
+      <Snackbar
+        open={offlineSnackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setOfflineSnackbarOpen(false)}
+        message="You are now offline. Some features may be limited."
+      />
+      
+      {/* Offline Action Queued Snackbar */}
+      <Snackbar
+        open={offlineActionQueued}
+        autoHideDuration={6000}
+        onClose={() => setOfflineActionQueued(false)}
+        message="Status update queued. Changes will sync when you're back online."
+      />
     </Box>
   );
 }

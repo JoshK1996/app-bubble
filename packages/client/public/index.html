@@ -7,6 +7,7 @@
     <meta name="theme-color" content="#1976d2" />
     <meta name="description" content="Real-time construction material tracking system" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
     <link rel="mask-icon" href="/masked-icon.svg" color="#FFFFFF" />
     <link
       rel="stylesheet"
@@ -17,5 +18,19 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Register service worker for PWA support
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/serviceWorker.js')
+            .then(registration => {
+              console.log('Service Worker registered with scope:', registration.scope);
+            })
+            .catch(error => {
+              console.error('Service Worker registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html> 

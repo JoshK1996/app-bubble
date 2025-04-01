@@ -1,0 +1,41 @@
+{
+  "short_name": "Construction Tracker",
+  "name": "Construction Material Tracking System",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#1976d2",
+  "background_color": "#ffffff",
+  "description": "Track construction materials throughout their lifecycle",
+  "orientation": "any",
+  "scope": "/",
+  "categories": ["business", "productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Scan QR Code",
+      "url": "/scan",
+      "description": "Scan a material QR code"
+    },
+    {
+      "name": "Import Materials",
+      "url": "/import",
+      "description": "Import materials from Excel"
+    }
+  ]
+} 

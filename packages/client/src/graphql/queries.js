@@ -198,6 +198,7 @@ export const materialByQrCode = /* GraphQL */ `
           id
           jobNumber
           jobName
+          clientName
           status
         }
       }
@@ -325,6 +326,23 @@ export const materialHistoryByMaterial = /* GraphQL */ `
         updatedAt
       }
       nextToken
+    }
+  }
+`;
+
+// Admin Queries
+export const listUsers = /* GraphQL */ `
+  query ListUsers {
+    listUsers {
+      items {
+        id
+        username
+        email
+        groups
+        status
+        createdAt
+        updatedAt
+      }
     }
   }
 `; 
