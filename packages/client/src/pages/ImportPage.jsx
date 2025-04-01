@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { API, Storage } from 'aws-amplify';
 import { 
   Box, 
@@ -15,24 +15,52 @@ import {
 } from '@mui/material';
 import { CloudUpload as CloudUploadIcon } from '@mui/icons-material';
 import { processExcelImport } from '../graphql/mutations';
+import { listJobs } from '../graphql/queries';
 
 function ImportPage() {
   const [activeStep, setActiveStep] = useState(0);
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedJobId, setSelectedJobId] = useState('');
+  const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [fetchingJobs, setFetchingJobs] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
   
-  // In a real app, this would be fetched from API
-  const mockJobs = [
-    { id: 'job-1', jobNumber: 'J-001', jobName: 'Downtown Hospital Project' },
-    { id: 'job-2', jobNumber: 'J-002', jobName: 'Office Tower Renovation' },
-    { id: 'job-3', jobNumber: 'J-003', jobName: 'School District HVAC Upgrade' }
-  ];
-  
   const steps = ['Select Job', 'Choose File', 'Upload & Process'];
+  
+  // Fetch available jobs on component mount
+  useEffect(() => {
+    const fetchJobs = async () => {
+      setFetchingJobs(true);
+      setError('');
+      
+      try {
+        const response = await API.graphql({
+          query: listJobs,
+          variables: {
+            filter: {
+              status: {
+                ne: 'ARCHIVED'
+              }
+            },
+            limit: 100
+          }
+        });
+        
+        const jobsData = response.data.listJobs.items;
+        setJobs(jobsData);
+      } catch (err) {
+        console.error('Error fetching jobs:', err);
+        setError('Failed to fetch available jobs. Please refresh the page.');
+      } finally {
+        setFetchingJobs(false);
+      }
+    };
+    
+    fetchJobs();
+  }, []);
   
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -85,20 +113,18 @@ function ImportPage() {
         }
       });
       
-      // In a real app, this would call the GraphQL mutation
-      // const response = await API.graphql({
-      //   query: processExcelImport,
-      //   variables: {
-      //     jobId: selectedJobId,
-      //     fileKey: filename
-      //   }
-      // });
+      // Call the GraphQL mutation to process the file
+      const response = await API.graphql({
+        query: processExcelImport,
+        variables: {
+          jobId: selectedJobId,
+          fileKey: filename
+        }
+      });
       
-      // Simulate processing delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Simulate successful response
-      setSuccessMessage('Excel file uploaded and processed successfully. 25 materials were imported.');
+      // Get the response message from the mutation
+      const resultMessage = response.data.processExcelImport;
+      setSuccessMessage(resultMessage || 'Excel file uploaded and processed successfully.');
       
       // Reset state
       setSelectedFile(null);
@@ -106,10 +132,15 @@ function ImportPage() {
       setActiveStep(0);
     } catch (err) {
       console.error('Error uploading file:', err);
-      setError('Failed to upload or process the file. Please try again.');
+      setError('Failed to upload or process the file: ' + (err.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
+  };
+  
+  // Find job details
+  const getJobDetails = (jobId) => {
+    return jobs.find(job => job.id === jobId) || {};
   };
   
   return (
@@ -144,21 +175,33 @@ function ImportPage() {
             <Typography variant="body1" gutterBottom>
               Select the job to import materials for:
             </Typography>
-            <TextField
-              select
-              fullWidth
-              label="Select Job"
-              value={selectedJobId}
-              onChange={handleJobChange}
-              variant="outlined"
-              sx={{ mb: 2 }}
-            >
-              {mockJobs.map((job) => (
-                <MenuItem key={job.id} value={job.id}>
-                  {job.jobNumber} - {job.jobName}
-                </MenuItem>
-              ))}
-            </TextField>
+            
+            {fetchingJobs ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : (
+              <TextField
+                select
+                fullWidth
+                label="Select Job"
+                value={selectedJobId}
+                onChange={handleJobChange}
+                variant="outlined"
+                sx={{ mb: 2 }}
+                disabled={jobs.length === 0}
+              >
+                {jobs.length === 0 ? (
+                  <MenuItem disabled>No active jobs available</MenuItem>
+                ) : (
+                  jobs.map((job) => (
+                    <MenuItem key={job.id} value={job.id}>
+                      {job.jobNumber} - {job.jobName}
+                    </MenuItem>
+                  ))
+                )}
+              </TextField>
+            )}
           </Box>
         )}
         
@@ -197,7 +240,7 @@ function ImportPage() {
             
             <Box sx={{ my: 2 }}>
               <Typography variant="body2">
-                <strong>Selected Job:</strong> {mockJobs.find(job => job.id === selectedJobId)?.jobName}
+                <strong>Selected Job:</strong> {getJobDetails(selectedJobId)?.jobName || selectedJobId}
               </Typography>
               <Typography variant="body2">
                 <strong>File:</strong> {selectedFile?.name}
@@ -249,26 +292,21 @@ function ImportPage() {
             <Typography variant="body2"><strong>systemType</strong> - System type (CHW, HHW, COND, DUCT_EXHAUST, DRAIN, OTHER)</Typography>
           </Box>
           <Box component="li">
-            <Typography variant="body2"><strong>locationLevel</strong> - Building level/floor (optional)</Typography>
+            <Typography variant="body2"><strong>locationLevel</strong> - Level/floor where material will be installed (optional)</Typography>
           </Box>
           <Box component="li">
-            <Typography variant="body2"><strong>locationZone</strong> - Zone within level (optional)</Typography>
+            <Typography variant="body2"><strong>locationZone</strong> - Zone/area where material will be installed (optional)</Typography>
           </Box>
           <Box component="li">
             <Typography variant="body2"><strong>quantityEstimated</strong> - Estimated quantity (numeric, default: 1)</Typography>
           </Box>
           <Box component="li">
-            <Typography variant="body2"><strong>unitOfMeasure</strong> - Unit of measure (EA, FT, etc., default: EA)</Typography>
+            <Typography variant="body2"><strong>unitOfMeasure</strong> - Unit of measure (default: EA)</Typography>
           </Box>
         </Box>
-        <Button 
-          variant="outlined" 
-          sx={{ mt: 2 }}
-          // In a real app, this would download a template file
-          onClick={() => console.log('Download template clicked')}
-        >
-          Download Template
-        </Button>
+        <Typography variant="body2" sx={{ mt: 2 }}>
+          <strong>Note:</strong> The Excel file must have these column headers in the first row. All materials will be imported with an initial status of "ESTIMATED".
+        </Typography>
       </Paper>
     </Box>
   );

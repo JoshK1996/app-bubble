@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import QRCode from 'react-qr-code';
-import { Box, Typography, Paper, Button } from '@mui/material';
+import { Box, Typography, Paper, Button, Stack } from '@mui/material';
+import { Print as PrintIcon, Download as DownloadIcon } from '@mui/icons-material';
 
 /**
  * Component for displaying and printing QR codes for materials
@@ -12,6 +13,8 @@ import { Box, Typography, Paper, Button } from '@mui/material';
  */
 const MaterialQRCode = ({ data, identifier, description, size = 128 }) => {
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const qrCodeRef = useRef(null);
 
   // Handle print button click
   const handlePrint = () => {
@@ -81,6 +84,68 @@ const MaterialQRCode = ({ data, identifier, description, size = 128 }) => {
     };
   };
 
+  // Handle download button click - convert SVG to PNG and download
+  const handleDownload = () => {
+    if (!data || !qrCodeRef.current) return;
+    
+    setIsDownloading(true);
+    
+    try {
+      const svgElement = qrCodeRef.current.querySelector('svg');
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      // Set canvas size to match desired output size
+      canvas.width = size * 2; // Higher resolution
+      canvas.height = size * 2;
+      
+      img.onload = () => {
+        // Fill with white background
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw the image
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Add text if available
+        if (identifier || description) {
+          ctx.fillStyle = 'black';
+          ctx.textAlign = 'center';
+          
+          if (identifier) {
+            ctx.font = 'bold 24px Arial';
+            ctx.fillText(identifier, canvas.width / 2, canvas.height - 40);
+          }
+          
+          if (description) {
+            ctx.font = '18px Arial';
+            ctx.fillText(
+              description.length > 25 ? description.substring(0, 25) + '...' : description, 
+              canvas.width / 2, 
+              canvas.height - 15
+            );
+          }
+        }
+        
+        // Download the image
+        const fileName = `qr-${identifier || 'material'}.png`;
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        
+        setIsDownloading(false);
+      };
+      
+      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    } catch (error) {
+      console.error('Error generating QR code image:', error);
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <Paper 
       elevation={2} 
@@ -95,6 +160,7 @@ const MaterialQRCode = ({ data, identifier, description, size = 128 }) => {
     >
       <Box 
         id="material-qr-code"
+        ref={qrCodeRef}
         sx={{ 
           p: 1, 
           backgroundColor: 'white',
@@ -123,15 +189,28 @@ const MaterialQRCode = ({ data, identifier, description, size = 128 }) => {
         </Typography>
       )}
       
-      <Button 
-        variant="outlined" 
-        size="small" 
-        sx={{ mt: 1 }}
-        onClick={handlePrint}
-        disabled={isPrinting || !data}
-      >
-        {isPrinting ? 'Printing...' : 'Print QR'}
-      </Button>
+      <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+        <Button 
+          variant="outlined" 
+          size="small"
+          startIcon={<PrintIcon />}
+          onClick={handlePrint}
+          disabled={isPrinting || !data}
+        >
+          {isPrinting ? 'Printing...' : 'Print'}
+        </Button>
+        
+        <Button 
+          variant="outlined" 
+          size="small"
+          color="secondary"
+          startIcon={<DownloadIcon />}
+          onClick={handleDownload}
+          disabled={isDownloading || !data}
+        >
+          {isDownloading ? 'Processing...' : 'Download'}
+        </Button>
+      </Stack>
     </Paper>
   );
 };

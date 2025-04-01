@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useZxing } from 'react-zxing';
+import { API } from 'aws-amplify';
 import { 
   Box, 
   Typography, 
@@ -11,15 +13,27 @@ import {
   CardContent,
   CardActions,
   Divider,
-  Grid
+  Grid,
+  TextField,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle
 } from '@mui/material';
+import { materialByQrCode } from '../graphql/queries';
+import { updateMaterialStatus } from '../graphql/mutations';
 
 function ScanPage() {
+  const navigate = useNavigate();
   const [result, setResult] = useState('');
   const [material, setMaterial] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cameraEnabled, setCameraEnabled] = useState(false);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [notes, setNotes] = useState('');
 
   // React-zxing hook for QR code scanning
   const { ref } = useZxing({
@@ -38,65 +52,67 @@ function ScanPage() {
     setError('');
     
     try {
-      // In a real implementation, this would call the GraphQL API
-      // const response = await API.graphql({
-      //   query: getMaterialByQrCode,
-      //   variables: { qrCodeData: qrData }
-      // });
-      
-      // Simulate API response
-      setTimeout(() => {
-        // Simulated successful material lookup
-        if (qrData.startsWith('MAT-')) {
-          setMaterial({
-            id: '123',
-            materialIdentifier: 'SPOOL-456',
-            description: '6" Carbon Steel Pipe Spool',
-            status: 'FABRICATED',
-            jobId: 'JOB-789',
-            job: { jobName: 'Downtown Hospital Project' },
-            materialType: 'SPOOL',
-            systemType: 'CHW'
-          });
-        } else {
-          // Simulated error
-          setError('Invalid QR code or material not found');
+      // Call the GraphQL API to get material by QR code
+      const response = await API.graphql({
+        query: materialByQrCode,
+        variables: { 
+          qrCodeData: qrData,
+          limit: 1
         }
-        setLoading(false);
-      }, 1000);
+      });
       
+      const items = response.data.materialByQrCode.items;
+      
+      if (items && items.length > 0) {
+        setMaterial(items[0]);
+      } else {
+        setError('Material not found with this QR code');
+      }
+      
+      setLoading(false);
     } catch (err) {
       console.error('Error fetching material:', err);
-      setError('Error fetching material information');
+      setError('Error fetching material information: ' + (err.message || 'Unknown error'));
       setLoading(false);
     }
   };
 
-  const handleUpdateStatus = async (newStatus) => {
+  const openStatusDialog = (newStatus) => {
+    setSelectedStatus(newStatus);
+    setStatusDialogOpen(true);
+  };
+
+  const closeStatusDialog = () => {
+    setStatusDialogOpen(false);
+    setSelectedStatus('');
+    setNotes('');
+  };
+
+  const confirmStatusUpdate = async () => {
+    setStatusDialogOpen(false);
+    await handleUpdateStatus(selectedStatus, notes);
+  };
+
+  const handleUpdateStatus = async (newStatus, notes) => {
     setLoading(true);
     
     try {
-      // In a real implementation, this would call the GraphQL API
-      // await API.graphql({
-      //   query: updateMaterialStatus,
-      //   variables: { 
-      //     materialId: material.id, 
-      //     status: newStatus 
-      //   }
-      // });
+      // Call the GraphQL API to update material status
+      const response = await API.graphql({
+        query: updateMaterialStatus,
+        variables: { 
+          materialId: material.id, 
+          status: newStatus,
+          notes: notes
+        }
+      });
       
-      // Simulate API call
-      setTimeout(() => {
-        setMaterial({
-          ...material,
-          status: newStatus
-        });
-        setLoading(false);
-      }, 1000);
-      
+      const updatedMaterial = response.data.updateMaterialStatus;
+      setMaterial(updatedMaterial);
+      setLoading(false);
     } catch (err) {
       console.error('Error updating status:', err);
-      setError('Error updating material status');
+      setError('Error updating material status: ' + (err.message || 'Unknown error'));
       setLoading(false);
     }
   };
@@ -108,21 +124,37 @@ function ScanPage() {
     setCameraEnabled(true);
   };
 
+  const viewMaterialDetails = () => {
+    if (material && material.id) {
+      navigate(`/materials/${material.id}`);
+    }
+  };
+
   // Determine available status transitions based on current status
   const getAvailableStatusTransitions = () => {
     if (!material) return [];
     
     const statusTransitions = {
-      FABRICATED: ['SHIPPED_TO_FIELD'],
+      ESTIMATED: ['DETAILED'],
+      DETAILED: ['RELEASED_TO_FAB'],
+      RELEASED_TO_FAB: ['IN_FABRICATION'],
+      IN_FABRICATION: ['FABRICATED', 'DAMAGED'],
+      FABRICATED: ['SHIPPED_TO_FIELD', 'DAMAGED'],
       SHIPPED_TO_FIELD: ['RECEIVED_ON_SITE', 'DAMAGED', 'MISSING'],
       RECEIVED_ON_SITE: ['INSTALLED', 'DAMAGED', 'EXCESS'],
       INSTALLED: [],
       DAMAGED: ['RETURNED_TO_WAREHOUSE'],
       EXCESS: ['RETURNED_TO_WAREHOUSE'],
-      RETURNED_TO_WAREHOUSE: []
+      RETURNED_TO_WAREHOUSE: [],
+      MISSING: []
     };
     
     return statusTransitions[material.status] || [];
+  };
+
+  // Format status for display
+  const formatStatus = (status) => {
+    return status.replace(/_/g, ' ');
   };
 
   return (
@@ -207,7 +239,7 @@ function ScanPage() {
                   Current Status
                 </Typography>
                 <Typography variant="body1" fontWeight="bold">
-                  {material.status.replace(/_/g, ' ')}
+                  {formatStatus(material.status)}
                 </Typography>
               </Grid>
               
@@ -216,7 +248,7 @@ function ScanPage() {
                   Job
                 </Typography>
                 <Typography variant="body1">
-                  {material.job.jobName}
+                  {material.job?.jobName || "N/A"}
                 </Typography>
               </Grid>
               
@@ -248,35 +280,74 @@ function ScanPage() {
             </Typography>
             
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {getAvailableStatusTransitions().map(status => (
+              {getAvailableStatusTransitions().map((status) => (
                 <Button 
                   key={status} 
-                  variant="outlined"
-                  onClick={() => handleUpdateStatus(status)}
-                  disabled={loading}
+                  variant="outlined" 
+                  size="small"
+                  onClick={() => openStatusDialog(status)}
                 >
-                  {status.replace(/_/g, ' ')}
+                  {formatStatus(status)}
                 </Button>
               ))}
               
               {getAvailableStatusTransitions().length === 0 && (
                 <Typography variant="body2" color="text.secondary">
-                  No status updates available for current state
+                  No status transitions available for {formatStatus(material.status)}
                 </Typography>
               )}
             </Box>
             
-            <Button 
-              variant="contained" 
-              color="primary"
-              sx={{ mt: 2 }}
-              onClick={startScanning}
-            >
-              Scan Another Item
-            </Button>
+            <Box sx={{ mt: 2 }}>
+              <Button 
+                variant="contained" 
+                color="primary"
+                onClick={viewMaterialDetails}
+                fullWidth
+              >
+                View Full Details
+              </Button>
+            </Box>
+            
+            <Box sx={{ mt: 2 }}>
+              <Button 
+                variant="outlined" 
+                onClick={startScanning}
+                fullWidth
+              >
+                Scan Another
+              </Button>
+            </Box>
           </CardActions>
         </Card>
       )}
+      
+      {/* Status Update Dialog */}
+      <Dialog open={statusDialogOpen} onClose={closeStatusDialog}>
+        <DialogTitle>Update Status</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to update the status to {formatStatus(selectedStatus)}?
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="notes"
+            label="Notes (Optional)"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeStatusDialog}>Cancel</Button>
+          <Button onClick={confirmStatusUpdate} variant="contained" color="primary">
+            Update
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
