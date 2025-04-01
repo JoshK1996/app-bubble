@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { API } from 'aws-amplify';
 import { 
   Box, 
   Typography, 
@@ -27,15 +28,10 @@ import {
   MenuItem
 } from '@mui/material';
 import { ArrowBack, Edit, History, QrCode2 } from '@mui/icons-material';
-import { 
-  getMaterial, 
-  materialByQrCode, 
-  updateMaterial, 
-  updateMaterialStatus,
-  listMaterialHistories
-} from '../utils/api';
-import { useAuth } from '../contexts/AuthContext';
+import { getMaterial } from '../graphql/queries';
+import { updateMaterialStatus } from '../graphql/mutations';
 import MaterialQRCode from '../components/MaterialQRCode';
+import MaterialHistory from '../components/MaterialHistory';
 
 // Helper function to format date
 const formatDate = (dateString) => {
@@ -44,11 +40,31 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
+// TabPanel component for tabs
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`material-tabpanel-${index}`}
+      aria-labelledby={`material-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 2 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
+
 const MaterialDetailPage = () => {
   const { materialId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, hasRole } = useAuth();
   
   const queryParams = new URLSearchParams(location.search);
   const qrCodeParam = queryParams.get('qrCode');
@@ -57,8 +73,6 @@ const MaterialDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tabValue, setTabValue] = useState(0);
-  const [history, setHistory] = useState([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
   
   // Status update dialog
   const [openStatusDialog, setOpenStatusDialog] = useState(false);
@@ -85,6 +99,22 @@ const MaterialDetailPage = () => {
     MISSING: 'error'
   };
   
+  // Available transitions
+  const statusTransitions = {
+    ESTIMATED: ['DETAILED'],
+    DETAILED: ['RELEASED_TO_FAB'],
+    RELEASED_TO_FAB: ['IN_FABRICATION'],
+    IN_FABRICATION: ['FABRICATED', 'DAMAGED'],
+    FABRICATED: ['SHIPPED_TO_FIELD', 'DAMAGED'],
+    SHIPPED_TO_FIELD: ['RECEIVED_ON_SITE', 'DAMAGED', 'MISSING'],
+    RECEIVED_ON_SITE: ['INSTALLED', 'DAMAGED', 'EXCESS'],
+    INSTALLED: [],
+    DAMAGED: ['RETURNED_TO_WAREHOUSE'],
+    EXCESS: ['RETURNED_TO_WAREHOUSE'],
+    RETURNED_TO_WAREHOUSE: [],
+    MISSING: []
+  };
+  
   // Load material data - either by ID or by QR code
   useEffect(() => {
     const fetchMaterialData = async () => {
@@ -96,9 +126,16 @@ const MaterialDetailPage = () => {
         
         // If QR code is provided in the URL, use it to look up the material
         if (qrCodeParam) {
-          const result = await materialByQrCode(qrCodeParam);
-          if (result?.items?.length > 0) {
-            materialData = result.items[0];
+          const result = await API.graphql({
+            query: materialByQrCode,
+            variables: { 
+              qrCodeData: qrCodeParam,
+              limit: 1
+            }
+          });
+          
+          if (result?.data?.materialByQrCode?.items?.length > 0) {
+            materialData = result.data.materialByQrCode.items[0];
             
             // Update URL to use the material ID for better bookmarking
             navigate(`/materials/${materialData.id}`, { replace: true });
@@ -107,7 +144,16 @@ const MaterialDetailPage = () => {
           }
         } else if (materialId) {
           // Otherwise use the material ID from the URL
-          materialData = await getMaterial(materialId);
+          const result = await API.graphql({
+            query: getMaterial,
+            variables: { id: materialId }
+          });
+          
+          materialData = result.data.getMaterial;
+          
+          if (!materialData) {
+            throw new Error('Material not found');
+          }
         } else {
           throw new Error('No material ID or QR code provided');
         }
@@ -129,37 +175,6 @@ const MaterialDetailPage = () => {
     
     fetchMaterialData();
   }, [materialId, qrCodeParam, navigate]);
-  
-  // Fetch material history when tab changes to history
-  useEffect(() => {
-    if (tabValue === 1 && material && !history.length && !loadingHistory) {
-      fetchMaterialHistory();
-    }
-  }, [tabValue, material, history.length]);
-  
-  const fetchMaterialHistory = async () => {
-    if (!material) return;
-    
-    try {
-      setLoadingHistory(true);
-      
-      const result = await listMaterialHistories({
-        filter: { materialId: { eq: material.id } },
-        limit: 100
-      });
-      
-      // Sort history by timestamp (newest first)
-      const sortedHistory = (result?.items || []).sort((a, b) => {
-        return new Date(b.timestamp) - new Date(a.timestamp);
-      });
-      
-      setHistory(sortedHistory);
-      setLoadingHistory(false);
-    } catch (err) {
-      console.error('Error fetching material history:', err);
-      setLoadingHistory(false);
-    }
-  };
   
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -185,29 +200,43 @@ const MaterialDetailPage = () => {
     
     try {
       // Call API to update status
-      const result = await updateMaterialStatus(material.id, newStatus, statusNotes);
+      const result = await API.graphql({
+        query: updateMaterialStatus,
+        variables: {
+          materialId: material.id,
+          status: newStatus,
+          notes: statusNotes
+        }
+      });
       
       // Update local state with new status
       setMaterial(prev => ({
         ...prev,
-        status: result.status,
-        updatedAt: result.updatedAt,
-        lastUpdatedBy: result.lastUpdatedBy
+        status: result.data.updateMaterialStatus.status,
+        updatedAt: result.data.updateMaterialStatus.updatedAt
       }));
       
       // Close dialog
       handleCloseStatusDialog();
       
-      // Refresh history if we're on that tab
-      if (tabValue === 1) {
-        fetchMaterialHistory();
-      }
     } catch (err) {
       console.error('Error updating material status:', err);
       setError('Failed to update status. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+  
+  const formatStatus = (status) => {
+    return status.replace(/_/g, ' ');
+  };
+  
+  const handleShowQrCode = () => {
+    setShowQrDialog(true);
+  };
+  
+  const handleCloseQrDialog = () => {
+    setShowQrDialog(false);
   };
   
   if (loading) {
@@ -255,350 +284,253 @@ const MaterialDetailPage = () => {
   }
   
   return (
-    <Box sx={{ px: 2, py: 3 }}>
-      {/* Header with Back Button and Title */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <Box>
-          <Button
-            startIcon={<ArrowBack />}
-            onClick={() => navigate(-1)}
-            sx={{ mb: 2 }}
+    <Box sx={{ p: 2 }}>
+      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() => navigate(-1)}
+          sx={{ mr: 2 }}
+        >
+          Back
+        </Button>
+        <Typography variant="h4" component="h1">
+          Material Details
+        </Typography>
+      </Box>
+      
+      <Paper sx={{ mb: 2 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs 
+            value={tabValue} 
+            onChange={handleTabChange}
+            aria-label="material tabs"
           >
-            Back
-          </Button>
-          
-          <Typography variant="h4" gutterBottom>
-            {material.materialIdentifier || 'Material Details'}
-          </Typography>
-          
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-            <Typography variant="subtitle1" color="text.secondary">
-              Status:
-            </Typography>
-            <Chip 
-              label={material.status} 
-              color={statusColors[material.status] || 'default'} 
-              size="small"
-            />
-          </Stack>
-          
-          {material.job && (
-            <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-              Job: <Button 
-                    variant="text" 
-                    size="small" 
-                    onClick={() => navigate(`/jobs/${material.job.id}`)}
-                  >
-                    {material.job.jobNumber} - {material.job.jobName}
-                  </Button>
-            </Typography>
-          )}
+            <Tab label="Details" id="material-tab-0" />
+            <Tab label="History" id="material-tab-1" />
+          </Tabs>
         </Box>
         
-        <Stack direction="row" spacing={1}>
-          <Button
-            startIcon={<QrCode2 />}
-            variant="outlined"
-            onClick={() => setShowQrDialog(true)}
-          >
-            View QR Code
-          </Button>
-          
-          {hasRole(['Admin', 'Estimator', 'Detailer', 'Purchaser', 'WarehouseStaff', 'FieldInstaller']) && (
-            <Button
-              startIcon={<Edit />}
-              variant="contained"
-              onClick={handleOpenStatusDialog}
-            >
-              Update Status
-            </Button>
-          )}
-        </Stack>
-      </Box>
-      
-      {/* Tabs for Details and History */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={tabValue} onChange={handleTabChange}>
-          <Tab icon={<Edit />} label="Details" />
-          <Tab icon={<History />} label="History" />
-        </Tabs>
-      </Box>
-      
-      {/* Details Tab */}
-      {tabValue === 0 && (
-        <Grid container spacing={3}>
-          {/* Left column - Basic Info */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, height: '100%' }}>
-              <Typography variant="h6" gutterBottom>Basic Information</Typography>
-              <Divider sx={{ mb: 2 }} />
+        {/* Details Tab */}
+        <TabPanel value={tabValue} index={0}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
+              <Typography variant="h5" component="h2">
+                {material.materialIdentifier}
+              </Typography>
               
-              <Grid container spacing={2}>
-                <Grid item xs={4}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Identifier
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="body1">
-                    {material.materialIdentifier || 'N/A'}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={4}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Description
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="body1">
-                    {material.description || 'N/A'}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={4}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Material Type
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="body1">
-                    {material.materialType || 'N/A'}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={4}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    System Type
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="body1">
-                    {material.systemType || 'N/A'}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={4}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Quantity
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="body1">
-                    {material.quantityEstimated ? `${material.quantityEstimated} ${material.unitOfMeasure || ''}` : 'N/A'}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
-          
-          {/* Right column - Location & Tracking */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, height: '100%' }}>
-              <Typography variant="h6" gutterBottom>Location & Tracking</Typography>
-              <Divider sx={{ mb: 2 }} />
-              
-              <Grid container spacing={2}>
-                <Grid item xs={4}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Location Level
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="body1">
-                    {material.locationLevel || 'N/A'}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={4}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Location Zone
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="body1">
-                    {material.locationZone || 'N/A'}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={4}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    QR Code Data
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="body1">
-                    {material.qrCodeData || 'N/A'}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={4}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Drawing ID
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="body1">
-                    {material.detailDrawingId || 'N/A'}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Divider sx={{ my: 1 }} />
-                </Grid>
-                
-                <Grid item xs={4}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Created By
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="body1">
-                    {material.createdBy || 'N/A'}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={4}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Created At
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="body1">
-                    {formatDate(material.createdAt)}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={4}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Last Updated By
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="body1">
-                    {material.lastUpdatedBy || 'N/A'}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={4}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Last Updated
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="body1">
-                    {formatDate(material.updatedAt)}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
-        </Grid>
-      )}
-      
-      {/* History Tab */}
-      {tabValue === 1 && (
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>Material History</Typography>
-          <Divider sx={{ mb: 2 }} />
-          
-          {loadingHistory ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : history.length === 0 ? (
-            <Alert severity="info">
-              No history records found for this material.
-            </Alert>
-          ) : (
-            <Box>
-              {history.map((record) => (
-                <Paper 
-                  key={record.id} 
-                  elevation={0} 
-                  sx={{ 
-                    p: 2, 
-                    mb: 2, 
-                    bgcolor: 'background.paper',
-                    border: 1,
-                    borderColor: 'divider'
-                  }}
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="outlined"
+                  startIcon={<QrCode2 />}
+                  onClick={handleShowQrCode}
                 >
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={3} md={2}>
-                      <Typography variant="caption" color="text.secondary">
-                        {formatDate(record.timestamp)}
-                      </Typography>
-                    </Grid>
-                    
-                    <Grid item xs={12} sm={9} md={10}>
-                      <Typography variant="subtitle2">
-                        {record.action === 'UPDATE_STATUS' ? 'Status Update' : record.action}
-                      </Typography>
-                      
-                      {record.fieldName && (
-                        <Typography variant="body2" gutterBottom>
-                          Changed <strong>{record.fieldName}</strong> from <strong>{record.oldValue || 'none'}</strong> to <strong>{record.newValue}</strong>
-                        </Typography>
-                      )}
-                      
-                      {record.notes && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                          Notes: {record.notes}
-                        </Typography>
-                      )}
-                      
-                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                        By: {record.userId || 'Unknown'}
-                      </Typography>
-                    </Grid>
+                  QR Code
+                </Button>
+                
+                {statusTransitions[material.status]?.length > 0 && (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleOpenStatusDialog}
+                  >
+                    Update Status
+                  </Button>
+                )}
+              </Stack>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Basic Information
+                </Typography>
+                
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Description
+                    </Typography>
+                    <Typography variant="body1">
+                      {material.description || 'N/A'}
+                    </Typography>
                   </Grid>
-                </Paper>
-              ))}
-            </Box>
-          )}
-        </Paper>
-      )}
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Current Status
+                    </Typography>
+                    <Chip 
+                      label={formatStatus(material.status)}
+                      color={statusColors[material.status] || 'default'}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Material Type
+                    </Typography>
+                    <Typography variant="body1">
+                      {material.materialType || 'N/A'}
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      System Type
+                    </Typography>
+                    <Typography variant="body1">
+                      {material.systemType || 'N/A'}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Project Information
+                </Typography>
+                
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Job
+                    </Typography>
+                    <Typography variant="body1">
+                      {material.job?.jobName || 'N/A'}
+                      {material.job?.jobNumber && ` (${material.job.jobNumber})`}
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Location
+                    </Typography>
+                    <Typography variant="body1">
+                      {material.locationLevel && `Level: ${material.locationLevel}`}
+                      {material.locationZone && material.locationLevel && ', '}
+                      {material.locationZone && `Zone: ${material.locationZone}`}
+                      {!material.locationLevel && !material.locationZone && 'N/A'}
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Quantity Estimated
+                    </Typography>
+                    <Typography variant="body1">
+                      {material.quantityEstimated ? 
+                        `${material.quantityEstimated} ${material.unitOfMeasure || ''}` : 
+                        'N/A'}
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Drawing Reference
+                    </Typography>
+                    <Typography variant="body1">
+                      {material.detailDrawingId || 'N/A'}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Tracking Information
+                </Typography>
+                
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Created At
+                    </Typography>
+                    <Typography variant="body1">
+                      {formatDate(material.createdAt)}
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Created By
+                    </Typography>
+                    <Typography variant="body1">
+                      {material.createdBy || 'System'}
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Last Updated
+                    </Typography>
+                    <Typography variant="body1">
+                      {formatDate(material.updatedAt)}
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Last Updated By
+                    </Typography>
+                    <Typography variant="body1">
+                      {material.lastUpdatedBy || 'N/A'}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Grid>
+          </Grid>
+        </TabPanel>
+        
+        {/* History Tab */}
+        <TabPanel value={tabValue} index={1}>
+          <MaterialHistory materialId={material.id} />
+        </TabPanel>
+      </Paper>
       
       {/* Status Update Dialog */}
-      <Dialog open={openStatusDialog} onClose={handleCloseStatusDialog} maxWidth="sm" fullWidth>
+      <Dialog open={openStatusDialog} onClose={handleCloseStatusDialog}>
         <DialogTitle>Update Material Status</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            Update the status of material <strong>{material.materialIdentifier || material.id}</strong>
+            Current status: <Chip 
+              label={formatStatus(material.status)} 
+              color={statusColors[material.status] || 'default'}
+              size="small"
+              sx={{ ml: 1 }}
+            />
           </DialogContentText>
           
-          <FormControl fullWidth margin="dense">
-            <InputLabel>Status</InputLabel>
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel id="new-status-label">New Status</InputLabel>
             <Select
+              labelId="new-status-label"
               value={newStatus}
-              label="Status"
+              label="New Status"
               onChange={(e) => setNewStatus(e.target.value)}
             >
-              <MenuItem value="ESTIMATED">Estimated</MenuItem>
-              <MenuItem value="DETAILED">Detailed</MenuItem>
-              <MenuItem value="RELEASED_TO_FAB">Released to Fabrication</MenuItem>
-              <MenuItem value="IN_FABRICATION">In Fabrication</MenuItem>
-              <MenuItem value="FABRICATED">Fabricated</MenuItem>
-              <MenuItem value="SHIPPED_TO_FIELD">Shipped to Field</MenuItem>
-              <MenuItem value="RECEIVED_ON_SITE">Received on Site</MenuItem>
-              <MenuItem value="INSTALLED">Installed</MenuItem>
-              <MenuItem value="EXCESS">Excess Material</MenuItem>
-              <MenuItem value="RETURNED_TO_WAREHOUSE">Returned to Warehouse</MenuItem>
-              <MenuItem value="DAMAGED">Damaged</MenuItem>
-              <MenuItem value="MISSING">Missing</MenuItem>
+              {statusTransitions[material.status]?.map((status) => (
+                <MenuItem key={status} value={status}>
+                  {formatStatus(status)}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
           
           <TextField
+            autoFocus
             margin="dense"
-            label="Notes"
-            multiline
-            rows={3}
+            id="notes"
+            label="Notes (Optional)"
+            type="text"
             fullWidth
+            variant="outlined"
             value={statusNotes}
             onChange={(e) => setStatusNotes(e.target.value)}
-            placeholder="Add any relevant notes about this status change..."
           />
         </DialogContent>
         <DialogActions>
@@ -606,32 +538,29 @@ const MaterialDetailPage = () => {
           <Button 
             onClick={handleStatusChange} 
             variant="contained" 
-            disabled={isSubmitting || newStatus === material.status}
+            color="primary"
+            disabled={isSubmitting || !newStatus || newStatus === material.status}
           >
-            {isSubmitting ? <CircularProgress size={24} /> : 'Update Status'}
+            {isSubmitting ? <CircularProgress size={24} /> : 'Update'}
           </Button>
         </DialogActions>
       </Dialog>
       
       {/* QR Code Dialog */}
-      <Dialog open={showQrDialog} onClose={() => setShowQrDialog(false)} maxWidth="xs">
+      <Dialog open={showQrDialog} onClose={handleCloseQrDialog} maxWidth="sm">
         <DialogTitle>Material QR Code</DialogTitle>
-        <DialogContent sx={{ textAlign: 'center' }}>
-          <MaterialQRCode
-            qrCodeData={material.qrCodeData}
-            materialId={material.id}
-            materialIdentifier={material.materialIdentifier}
-          />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-            Material ID: {material.id}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-            QR Code Data: {material.qrCodeData}
-          </Typography>
+        <DialogContent>
+          <Box sx={{ textAlign: 'center', p: 2 }}>
+            <MaterialQRCode 
+              data={material.qrCodeData} 
+              identifier={material.materialIdentifier}
+              description={material.description}
+              size={250}
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowQrDialog(false)}>Close</Button>
-          <Button variant="contained">Print</Button>
+          <Button onClick={handleCloseQrDialog}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

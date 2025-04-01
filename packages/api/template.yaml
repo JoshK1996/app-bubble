@@ -1,0 +1,216 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+  
+  MaterialTableName:
+    Type: String
+    Default: Material-${Environment}
+  
+  HistoryTableName:
+    Type: String
+    Default: MaterialHistory-${Environment}
+  
+  JobTableName:
+    Type: String
+    Default: Job-${Environment}
+  
+  ImportBucketName:
+    Type: String
+    Default: construction-tracker-imports-${Environment}
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: nodejs14.x
+    Environment:
+      Variables:
+        MATERIAL_TABLE: !Ref MaterialTableName
+        HISTORY_TABLE: !Ref HistoryTableName
+        JOB_TABLE: !Ref JobTableName
+        IMPORT_BUCKET: !Ref ImportBucketName
+        ENV: !Ref Environment
+
+Resources:
+  # Lambda Functions
+  UpdateMaterialStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/updateMaterialStatus/
+      Handler: index.handler
+      Description: Lambda function to update material status and record history
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MaterialTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref HistoryTableName
+
+  ListMaterialHistoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/listMaterialHistory/
+      Handler: index.handler
+      Description: Lambda function to retrieve material history records
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref HistoryTableName
+
+  GetMaterialByQrCodeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/getMaterialByQrCode/
+      Handler: index.handler
+      Description: Lambda function to retrieve materials by QR code
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref MaterialTableName
+
+  ProcessExcelImportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/processExcelImport/
+      Handler: index.handler
+      Description: Lambda function to process Excel imports and create/update materials
+      Timeout: 300 # 5 minutes for large file processing
+      MemorySize: 512 # More memory for processing large Excel files
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MaterialTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref HistoryTableName
+        - DynamoDBReadPolicy:
+            TableName: !Ref JobTableName
+        - S3ReadPolicy:
+            BucketName: !Ref ImportBucketName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !Sub arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
+
+  # DynamoDB Tables
+  MaterialTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref MaterialTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: jobId
+          AttributeType: S
+        - AttributeName: materialIdentifier
+          AttributeType: S
+        - AttributeName: qrCodeData
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: byJob
+          KeySchema:
+            - AttributeName: jobId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: jobId-materialIdentifier-index
+          KeySchema:
+            - AttributeName: jobId
+              KeyType: HASH
+            - AttributeName: materialIdentifier
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: qrCodeData-index
+          KeySchema:
+            - AttributeName: qrCodeData
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  HistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref HistoryTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: materialId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: materialId-timestamp-index
+          KeySchema:
+            - AttributeName: materialId
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: byMaterialId
+          KeySchema:
+            - AttributeName: materialId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  # S3 Bucket for Excel imports
+  ImportBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref ImportBucketName
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
+              - HEAD
+            AllowedOrigins:
+              - '*'
+            MaxAge: 3600
+
+Outputs:
+  UpdateMaterialStatusFunction:
+    Description: "Update Material Status Lambda Function ARN"
+    Value: !GetAtt UpdateMaterialStatusFunction.Arn
+
+  ListMaterialHistoryFunction:
+    Description: "List Material History Lambda Function ARN"
+    Value: !GetAtt ListMaterialHistoryFunction.Arn
+
+  GetMaterialByQrCodeFunction:
+    Description: "Get Material By QR Code Lambda Function ARN"
+    Value: !GetAtt GetMaterialByQrCodeFunction.Arn
+
+  ProcessExcelImportFunction:
+    Description: "Process Excel Import Lambda Function ARN"
+    Value: !GetAtt ProcessExcelImportFunction.Arn
+
+  MaterialTable:
+    Description: "Material DynamoDB Table Name"
+    Value: !Ref MaterialTable
+
+  HistoryTable:
+    Description: "Material History DynamoDB Table Name"
+    Value: !Ref HistoryTable
+
+  ImportBucket:
+    Description: "S3 Bucket for Excel Imports"
+    Value: !Ref ImportBucket 

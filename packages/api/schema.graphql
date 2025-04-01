@@ -1,0 +1,142 @@
+type Job @model
+  @auth(rules: [
+    { allow: groups, groups: ["Admin", "Estimator", "Detailer", "Purchaser", "WarehouseStaff", "FieldInstaller"], operations: [read] },
+    { allow: groups, groups: ["Admin", "Estimator"], operations: [create, update, delete] }
+  ]) {
+  id: ID!
+  jobNumber: String!
+  jobName: String!
+  client: String
+  location: String
+  description: String
+  startDate: AWSDate
+  endDate: AWSDate
+  status: JobStatus!
+  materials: [Material] @hasMany(indexName: "byJob", fields: ["id"])
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+type Material @model
+  @auth(rules: [
+    { allow: groups, groups: ["Admin", "Estimator", "Detailer", "Purchaser", "WarehouseStaff", "FieldInstaller"], operations: [read] },
+    { allow: groups, groups: ["Admin", "Estimator", "Detailer"], operations: [create, update] },
+    { allow: groups, groups: ["Admin"], operations: [delete] }
+  ]) {
+  id: ID!
+  job: Job @belongsTo(fields: ["jobId"])
+  jobId: ID! @index(name: "byJob")
+  materialIdentifier: String!
+  description: String
+  materialType: String
+  systemType: String
+  qrCodeData: String!
+  status: MaterialStatus!
+  quantityEstimated: Float
+  unitOfMeasure: String
+  costEstimated: Float
+  locationLevel: String
+  locationZone: String
+  detailDrawingId: String
+  createdBy: String
+  lastUpdatedBy: String
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+type MaterialHistory 
+  @auth(rules: [
+    { allow: groups, groups: ["Admin", "Estimator", "Detailer", "Purchaser", "WarehouseStaff", "FieldInstaller"], operations: [read] },
+    { allow: groups, groups: ["Admin"], operations: [delete] }
+  ]) {
+  id: ID!
+  materialId: ID! @index(name: "byMaterialId")
+  timestamp: AWSDateTime!
+  action: String!
+  fieldName: String
+  oldValue: String
+  newValue: String
+  userId: String
+  notes: String
+}
+
+type MaterialHistoryConnection {
+  items: [MaterialHistory!]!
+  nextToken: String
+}
+
+enum JobStatus {
+  PLANNING
+  ESTIMATING
+  DETAILING
+  PROCUREMENT
+  FABRICATION
+  INSTALLATION
+  COMPLETE
+  ON_HOLD
+  CANCELLED
+}
+
+enum MaterialStatus {
+  ESTIMATED
+  DETAILED
+  RELEASED_TO_FAB
+  IN_FABRICATION
+  FABRICATED
+  SHIPPED_TO_FIELD
+  RECEIVED_ON_SITE
+  INSTALLED
+  EXCESS
+  RETURNED_TO_WAREHOUSE
+  DAMAGED
+  MISSING
+}
+
+type StatusUpdateResponse {
+  id: ID!
+  status: MaterialStatus!
+  lastUpdatedBy: String
+  updatedAt: AWSDateTime
+  history: [MaterialHistory]
+}
+
+type Query {
+  materialByQrCode(qrCodeData: String!, limit: Int): ModelMaterialConnection @function(name: "getMaterialByQrCode-${env}")
+  listMaterialHistory(materialId: ID!, limit: Int, nextToken: String): MaterialHistoryConnection @function(name: "listMaterialHistory-${env}")
+}
+
+type Mutation {
+  updateMaterialStatus(materialId: ID!, status: MaterialStatus!, notes: String, username: String): StatusUpdateResponse @function(name: "updateMaterialStatus-${env}")
+  processExcelImport(jobId: ID!, fileKey: String!, username: String!): ProcessExcelResponse @function(name: "processExcelImport-${env}")
+}
+
+type Subscription {
+  onMaterialStatusChanged(materialId: ID!): StatusUpdateResponse
+    @aws_subscribe(mutations: ["updateMaterialStatus"])
+  
+  onMaterialImported(jobId: ID!): Material
+    @aws_subscribe(mutations: ["processExcelImport"])
+}
+
+type ProcessExcelResponse {
+  jobId: ID!
+  fileKey: String!
+  status: String!
+  materialsCreated: Int
+  materialsUpdated: Int
+  errors: [String]
+}
+
+input ModelMaterialHistoryFilterInput {
+  materialId: ModelIDInput
+  timestamp: ModelStringInput
+  action: ModelStringInput
+  and: [ModelMaterialHistoryFilterInput]
+  or: [ModelMaterialHistoryFilterInput]
+  not: ModelMaterialHistoryFilterInput
+}
+
+type ModelMaterialConnection {
+  items: [Material]!
+  nextToken: String
+} 

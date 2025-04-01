@@ -1,0 +1,20 @@
+{
+  "version": "2018-05-29",
+  "operation": "Invoke",
+  "payload": {
+    "arguments": {
+      "materialId": $utils.toJson($ctx.args.materialId),
+      "status": $utils.toJson($ctx.args.status),
+      "notes": $utils.toJson($ctx.args.notes),
+      ## If a username is provided, use it. Otherwise, try to get from the identity
+      #if($ctx.args.username)
+        "username": $utils.toJson($ctx.args.username)
+      #elseif($ctx.identity && $ctx.identity.username)
+        "username": $utils.toJson($ctx.identity.username)
+      #else
+        "username": $utils.toJson("system")
+      #end
+    },
+    "identity": $utils.toJson($ctx.identity)
+  }
+} 

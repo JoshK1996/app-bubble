@@ -1,0 +1,12 @@
+## If error is returned in the response
+#if($ctx.error)
+  $utils.error($ctx.error.message, $ctx.error.type, $ctx.result)
+#end
+
+## If the response is null, return an error
+#if($util.isNull($ctx.result))
+  $utils.error("Failed to process Excel import.", "InternalServerError")
+#end
+
+## Otherwise, return the result directly
+$util.toJson($ctx.result) 
