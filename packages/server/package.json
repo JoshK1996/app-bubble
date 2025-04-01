@@ -1,0 +1,31 @@
+{
+  "name": "@construction-tracker/server",
+  "version": "0.1.0",
+  "description": "Express.js server for Construction Tracker",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@aws-sdk/client-lambda": "^3.300.0",
+    "@aws-sdk/client-s3": "^3.300.0",
+    "@aws-sdk/client-secrets-manager": "^3.300.0",
+    "aws-sdk": "^2.1348.0",
+    "bwip-js": "^3.4.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "pg": "^8.10.0",
+    "qrcode": "^1.5.3",
+    "uuid": "^9.0.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/node": "^18.15.11",
+    "eslint": "^8.38.0",
+    "nodemon": "^2.0.22"
+  }
+} 

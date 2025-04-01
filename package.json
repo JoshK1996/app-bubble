@@ -1,0 +1,17 @@
+{
+  "name": "construction-tracker",
+  "version": "1.0.0",
+  "description": "Real-Time Construction Material Tracking System",
+  "main": "index.js",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "client": "npm run dev --workspace=@construction-tracker/client",
+    "server": "npm run dev --workspace=@construction-tracker/server",
+    "dev": "concurrently \"npm run client\" \"npm run server\""
+  },
+  "keywords": ["construction", "material-tracking", "aws", "pwa"],
+  "author": "",
+  "license": "ISC"
+}
